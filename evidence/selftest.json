@@ -1,6 +1,19 @@
 {
   "anchor" : {
-    "claudeWindowFound" : false,
+    "clampedOriginInside" : true,
+    "clampMargins" : {
+      "bottom" : 6,
+      "left" : 6,
+      "right" : 6,
+      "top" : 34
+    },
+    "claudeFrontmost" : true,
+    "claudeWindow" : {
+      "height" : 1074,
+      "width" : 1710,
+      "x" : 0,
+      "y" : 38
+    },
     "mode" : "claudeWindow"
   },
   "auth" : {
@@ -31,6 +44,12 @@
   "interactionOK" : true,
   "layout" : {
     "aspectOK" : true,
+    "badge" : {
+      "h" : 30,
+      "w" : 88,
+      "x" : 12,
+      "y" : 138
+    },
     "bubble" : {
       "h" : 88,
       "w" : 248,
@@ -50,7 +69,9 @@
       "y" : 112
     },
     "crabAspect" : 1.2692307692307694,
+    "petScale" : 1,
     "targetAspect" : 1.2692000000000001,
+    "textScale" : 1,
     "windowSize" : {
       "h" : 243.33333333333331,
       "w" : 268
@@ -65,10 +86,10 @@
   },
   "quota" : {
     "fiveHour" : {
-      "percentage" : 22,
+      "percentage" : 25,
       "resetAt" : 1793117942305,
       "total" : 28000,
-      "used" : 6239
+      "used" : 7060
     },
     "level" : "MAX",
     "ok" : true,
@@ -77,7 +98,7 @@
       "percentage" : 40,
       "resetAt" : 1793414092978,
       "total" : 140000,
-      "used" : 55821
+      "used" : 56642
     },
     "worstPercentage" : 40
   },

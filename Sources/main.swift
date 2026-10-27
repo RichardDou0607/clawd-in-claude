@@ -61,6 +61,8 @@ func runProcess(_ path: String, _ args: [String], timeout: TimeInterval = 8) -> 
 
 struct AppConfig: Codable {
     var unit: Double = 14
+    /// 气泡字体缩放(独立于 unit;nil/1.0 = 默认大小);用 Optional 兼容旧 config
+    var textScale: Double? = nil
     /// claudeWindow = 只在 Claude Code App 窗口内显示(默认);desktop = 桌面自由悬浮
     var anchorMode: String = "claudeWindow"
     /// 宠物窗口相对 Claude 窗口左上角的偏移(CG 坐标,点);nil = 默认右下角
@@ -605,6 +607,7 @@ protocol PetViewDelegate: AnyObject {
     func petViewCyclePage(_ view: PetView)
     func petViewRequestQuit(_ view: PetView)
     func petViewAdjustScale(_ view: PetView, delta: Double)
+    func petViewAdjustTextScale(_ view: PetView, delta: Double)
     func petViewDidFinishDrag(_ view: PetView)
     func petViewRequestMenu(_ view: PetView, event: NSEvent)
 }
@@ -640,6 +643,8 @@ final class PetView: NSView {
     var planCycle: String = "monthly"
     var refreshMinutes = 1
     var unit: CGFloat = 14
+    /// 气泡字体/气泡尺寸缩放,独立于宠物 unit
+    var textScale: CGFloat = 1.0
 
     private enum HitPart { case none, crab, bubble, close }
     private var hoverPart: HitPart = .none
@@ -664,47 +669,81 @@ final class PetView: NSView {
 
     private var layoutScale: CGFloat { unit / PetView.baseUnit }
 
-    private func metrics() -> (bubble: NSRect, crab: NSRect, close: NSRect, pageDots: NSRect, stateBadge: NSRect) {
-        let pixelHeight = PetView.baseUnit * 13.0 / 6.0
-        let crabWidth = PetView.baseUnit * 11
-        let crabHeight = pixelHeight * 4
-        let margin: CGFloat = 10
-        let bubbleWidth = max(248, crabWidth + 46)
-        let bubbleHeight: CGFloat = 88
-        let totalWidth = max(bubbleWidth, crabWidth) + margin * 2
-        let bubbleRect = NSRect(x: (totalWidth - bubbleWidth) / 2, y: margin,
-                                width: bubbleWidth, height: bubbleHeight)
-        let crabRect = NSRect(x: totalWidth - margin - crabWidth,
-                              y: bubbleRect.maxY + 14,
-                              width: crabWidth, height: crabHeight)
-        let closeRect = NSRect(x: bubbleRect.maxX - 22, y: bubbleRect.minY + 6, width: 16, height: 16)
-        // 页脚四个点在详情文字下方,避免和字样重合
-        let dotsRect = NSRect(x: bubbleRect.minX + 14, y: bubbleRect.minY + 77, width: 60, height: 5)
-        _ = totalWidth
-        // 左侧空白区放状态牌(思考中/调用工具/工作中…)
-        let badgeRect = NSRect(x: margin + 2, y: crabRect.minY + 26, width: 88, height: 30)
-        return (bubbleRect, crabRect, closeRect, dotsRect, badgeRect)
+    /// unit 控制宠物/道具;textScale 只控制气泡尺寸和字体,二者独立。
+    private struct PixelLayout {
+        var window: NSSize
+        var bubbleOrigin: NSPoint
+        var bubbleSize: NSSize
+        var crabOrigin: NSPoint
+        var crabSize: NSSize
+        var closeRect: NSRect
+        var dotsRect: NSRect
+        var badgeRect: NSRect
+        var petScale: CGFloat
+        var textScale: CGFloat
+        var bubbleRect: NSRect { NSRect(origin: bubbleOrigin, size: bubbleSize) }
+        var crabRect: NSRect { NSRect(origin: crabOrigin, size: crabSize) }
     }
 
-    func desiredSize() -> NSSize {
-        let m = metrics()
-        let s = layoutScale
-        return NSSize(width: (max(m.bubble.maxX, m.crab.maxX) + 10) * s,
-                      height: (m.crab.maxY + 10) * s)
+    private func pixelLayout() -> PixelLayout {
+        let petScale = unit / PetView.baseUnit
+        let ts = max(0.55, min(2.2, textScale))
+        let baseBubbleW: CGFloat = 248
+        let baseBubbleH: CGFloat = 88
+        let baseCrabW: CGFloat = 154
+        let baseCrabH: CGFloat = 4 * (14.0 * 13.0 / 6.0)
+        let margin: CGFloat = 10
+        let gap: CGFloat = 14
+        let leftSpace = 94 * petScale
+
+        let bubbleW = baseBubbleW * ts
+        let bubbleH = baseBubbleH * ts
+        let crabW = baseCrabW * petScale
+        let crabH = baseCrabH * petScale
+        let totalW = max(bubbleW, crabW + leftSpace) + margin * 2
+        let totalH = margin + bubbleH + gap + crabH + margin
+
+        let bubbleOrigin = NSPoint(x: margin, y: margin)
+        let crabOrigin = NSPoint(x: totalW - margin - crabW, y: margin + bubbleH + gap)
+        let close = NSRect(x: bubbleOrigin.x + (baseBubbleW - 22) * ts,
+                           y: bubbleOrigin.y + 6 * ts,
+                           width: 16 * ts, height: 16 * ts)
+        let dots = NSRect(x: bubbleOrigin.x + 14 * ts,
+                          y: bubbleOrigin.y + 77 * ts,
+                          width: 60 * ts, height: 5 * ts)
+        let badge = NSRect(x: crabOrigin.x - 92 * petScale,
+                           y: crabOrigin.y + 26 * petScale,
+                           width: 88 * petScale, height: 30 * petScale)
+        return PixelLayout(window: NSSize(width: totalW, height: totalH),
+                           bubbleOrigin: bubbleOrigin,
+                           bubbleSize: NSSize(width: bubbleW, height: bubbleH),
+                           crabOrigin: crabOrigin,
+                           crabSize: NSSize(width: crabW, height: crabH),
+                           closeRect: close, dotsRect: dots, badgeRect: badge,
+                           petScale: petScale, textScale: ts)
     }
+
+    func desiredSize() -> NSSize { pixelLayout().window }
 
     /// 给 --selftest 用的几何/命中检查(不参与交互)
     func debugLayoutReport() -> [String: Any] {
-        let m = metrics()
-        let crabAspect = m.crab.height > 0 ? m.crab.width / m.crab.height : 0
+        let l = pixelLayout()
+        let crabAspect = l.crabSize.height > 0 ? l.crabSize.width / l.crabSize.height : 0
         return [
-            "bubble": ["x": m.bubble.minX, "y": m.bubble.minY, "w": m.bubble.width, "h": m.bubble.height],
-            "crab": ["x": m.crab.minX, "y": m.crab.minY, "w": m.crab.width, "h": m.crab.height],
-            "close": ["x": m.close.minX, "y": m.close.minY, "w": m.close.width, "h": m.close.height],
+            "bubble": ["x": l.bubbleRect.minX, "y": l.bubbleRect.minY,
+                       "w": l.bubbleRect.width, "h": l.bubbleRect.height],
+            "crab": ["x": l.crabRect.minX, "y": l.crabRect.minY,
+                     "w": l.crabRect.width, "h": l.crabRect.height],
+            "close": ["x": l.closeRect.minX, "y": l.closeRect.minY,
+                      "w": l.closeRect.width, "h": l.closeRect.height],
+            "badge": ["x": l.badgeRect.minX, "y": l.badgeRect.minY,
+                      "w": l.badgeRect.width, "h": l.badgeRect.height],
             "crabAspect": crabAspect,
             "targetAspect": 1.2692,
             "aspectOK": abs(crabAspect - 1.2692) < 0.03,
-            "windowSize": ["w": desiredSize().width, "h": desiredSize().height],
+            "petScale": l.petScale,
+            "textScale": l.textScale,
+            "windowSize": ["w": l.window.width, "h": l.window.height],
         ]
     }
 
@@ -810,18 +849,34 @@ final class PetView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current else { return }
         context.shouldAntialias = true
-        let m = metrics()
+        let l = pixelLayout()
         let mood = currentMood()
         let pages = pages()
         pageCount = pages.count
+
+        // 气泡:独立的 textScale(字体大小只由它控制)
         NSGraphicsContext.saveGraphicsState()
-        let transform = NSAffineTransform()
-        transform.scale(by: layoutScale)
-        transform.concat()
-        drawBubble(in: m.bubble, mood: mood, pages: pages, close: m.close, dots: m.pageDots)
-        drawCrab(in: m.crab, mood: mood, activity: activity)
-        drawActivityEffects(in: m.crab, activity: activity, tool: activityTool)
-        drawStateBadge(in: m.stateBadge, activity: activity, tool: activityTool)
+        let bubbleTransform = NSAffineTransform()
+        bubbleTransform.translateX(by: l.bubbleOrigin.x, yBy: l.bubbleOrigin.y)
+        bubbleTransform.scale(by: l.textScale)
+        bubbleTransform.concat()
+        let baseBubble = NSRect(x: 0, y: 0, width: 248, height: 88)
+        let localClose = NSRect(x: 226, y: 6, width: 16, height: 16)
+        let localDots = NSRect(x: 14, y: 77, width: 60, height: 5)
+        drawBubble(in: baseBubble, mood: mood, pages: pages, close: localClose, dots: localDots)
+        NSGraphicsContext.restoreGraphicsState()
+
+        // 宠物 + 道具 + 状态牌:只跟 unit 的 petScale 走
+        NSGraphicsContext.saveGraphicsState()
+        let petTransform = NSAffineTransform()
+        petTransform.translateX(by: l.crabOrigin.x, yBy: l.crabOrigin.y)
+        petTransform.scale(by: l.petScale)
+        petTransform.concat()
+        let baseCrab = NSRect(x: 0, y: 0, width: 154, height: 4 * (14.0 * 13.0 / 6.0))
+        let baseBadge = NSRect(x: -92, y: 26, width: 88, height: 30)
+        drawCrab(in: baseCrab, mood: mood, activity: activity)
+        drawActivityEffects(in: baseCrab, activity: activity, tool: activityTool)
+        drawStateBadge(in: baseBadge, activity: activity, tool: activityTool)
         NSGraphicsContext.restoreGraphicsState()
     }
 
@@ -984,22 +1039,25 @@ final class PetView: NSView {
 
         // 取整避免像素块之间出现缝隙(非整数偏移 + 关闭抗锯齿会露网格线)
         let bodyRect = rect.offsetBy(dx: offset.x.rounded(), dy: offset.y.rounded())
+        // 把所有身体像素块合成一条路径再一次性填充,避免非整数缩放时块与块之间露出网格缝
+        let bodyPath = NSBezierPath()
+        var eyes: [NSRect] = []
         for (rowIndex, row) in rows.enumerated() {
             for (columnIndex, character) in row.enumerated() where character != "." {
                 let cell = NSRect(x: bodyRect.minX + CGFloat(columnIndex) * pixelWidth,
                                   y: bodyRect.minY + CGFloat(rowIndex) * pixelHeight,
                                   width: pixelWidth, height: pixelHeight)
-                ClawdSprite.bodyColor.setFill()
-                NSBezierPath(rect: cell).fill()
+                bodyPath.appendRect(cell)
                 if character == "E", !blink {
-                    // 官方 clawd.svg 的眼睛是 6×6(6×13 单元格的上半格),不是整格黑条
-                    let eyeRect = NSRect(x: cell.minX, y: cell.minY,
-                                         width: cell.width, height: cell.height * 6.0 / 13.0)
-                    ClawdSprite.eyeColor.setFill()
-                    NSBezierPath(rect: eyeRect).fill()
+                    eyes.append(NSRect(x: cell.minX, y: cell.minY,
+                                       width: cell.width, height: cell.height * 6.0 / 13.0))
                 }
             }
         }
+        ClawdSprite.bodyColor.setFill()
+        bodyPath.fill()
+        ClawdSprite.eyeColor.setFill()
+        for eye in eyes { NSBezierPath(rect: eye).fill() }
         context?.shouldAntialias = true
 
         drawMoodExtras(in: bodyRect, mood: mood, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
@@ -1793,13 +1851,12 @@ final class PetView: NSView {
     // MARK: 命中/交互
 
     private func hitTestPart(_ point: NSPoint) -> HitPart {
-        let m = metrics()
-        let s = layoutScale
-        let p = NSPoint(x: point.x / s, y: point.y / s)
-        if m.close.insetBy(dx: -4, dy: -4).contains(p) { return .close }
-        if m.bubble.contains(p) { return .bubble }
+        let l = pixelLayout()
+        let slack = 4 * l.textScale
+        if l.closeRect.insetBy(dx: -slack, dy: -slack).contains(point) { return .close }
+        if l.bubbleRect.contains(point) { return .bubble }
         // 气泡下方的整块区域(螃蟹 + 状态牌 + 空白)都算“点宠物”→ 刷新额度
-        if p.y >= m.bubble.maxY - 2 { return .crab }
+        if point.y >= l.bubbleRect.maxY - 2 { return .crab }
         return .none
     }
 
@@ -1877,10 +1934,15 @@ final class PetView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        // 普通滚轮留给 Claude 页面滚动;调大小必须按住 Option,避免误触
+        // 普通滚轮留给 Claude 页面滚动;Option=宠物大小,Option+Shift=字体大小
         guard event.modifierFlags.contains(.option) else { return }
         guard abs(event.scrollingDeltaY) > 0.05 else { return }
-        delegate?.petViewAdjustScale(self, delta: event.scrollingDeltaY > 0 ? 1 : -1)
+        let delta = event.scrollingDeltaY > 0 ? 1.0 : -1.0
+        if event.modifierFlags.contains(.shift) {
+            delegate?.petViewAdjustTextScale(self, delta: delta)
+        } else {
+            delegate?.petViewAdjustScale(self, delta: delta)
+        }
     }
 }
 
@@ -2106,6 +2168,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         petView = PetView(frame: .zero)
         petView.delegate = self
         petView.unit = CGFloat(config.unit)
+        petView.textScale = CGFloat(config.textScale ?? 1.0)
         petView.page = config.page
         petView.renewalDay = config.renewalDay
         petView.renewalDateString = config.renewalDate
@@ -2316,6 +2379,10 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         let anchorItem = NSMenuItem(title: "显示位置", action: nil, keyEquivalent: "")
         anchorItem.submenu = anchorModeMenu()
         menu.addItem(anchorItem)
+
+        let textItem = NSMenuItem(title: "字体大小(气泡)", action: nil, keyEquivalent: "")
+        textItem.submenu = textScaleMenu()
+        menu.addItem(textItem)
         menu.addItem(.separator())
 
         let levelMenu = NSMenu()
@@ -2358,6 +2425,29 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
                 entry.state = (entry.representedObject as? String) == config.anchorMode ? .on : .off
             }
         }
+        for item in menu.items where item.title == "字体大小(气泡)" {
+            let current = config.textScale ?? 1.0
+            for entry in item.submenu?.items ?? [] {
+                entry.state = abs(current - Double(entry.tag) / 100.0) < 0.01 ? .on : .off
+            }
+        }
+    }
+
+    private func textScaleMenu() -> NSMenu {
+        let menu = NSMenu()
+        let current = config.textScale ?? 1.0
+        for (title, value) in [("小", 0.85), ("中", 1.0), ("大", 1.25), ("特大", 1.5)] {
+            let item = NSMenuItem(title: "\(title)(\(String(format: "%.2g", value))x)", action: #selector(menuTextScale(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = Int(value * 100)
+            item.state = abs(current - value) < 0.01 ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func menuTextScale(_ sender: NSMenuItem) {
+        applyTextScale(Double(sender.tag) / 100.0)
     }
 
     private func stateDemoMenu() -> NSMenu {
@@ -2552,6 +2642,31 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         applyUnit(newUnit)
     }
 
+    func petViewAdjustTextScale(_ view: PetView, delta: Double) {
+        let current = config.textScale ?? 1.0
+        let next = min(2.2, max(0.55, current + delta * 0.05))
+        guard abs(next - current) > 0.001 else { return }
+        applyTextScale(next)
+    }
+
+    private func applyTextScale(_ value: Double) {
+        let oldFrame = panel.frame
+        petView.textScale = CGFloat(value)
+        let newSize = petView.desiredSize()
+        petView.frame = NSRect(origin: .zero, size: newSize)
+        if config.anchorMode == "claudeWindow" {
+            panel.setFrame(NSRect(origin: oldFrame.origin, size: newSize), display: true)
+            repositionInClaude(force: true)
+        } else {
+            var origin = NSPoint(x: oldFrame.maxX - newSize.width, y: oldFrame.minY)
+            origin = constrainOrigin(origin, size: newSize)
+            panel.setFrame(NSRect(origin: origin, size: newSize), display: true)
+        }
+        config.textScale = value
+        saveWindowPosition()
+        petView.needsDisplay = true
+    }
+
     private func applyUnit(_ unit: Double) {
         let oldFrame = panel.frame
         petView.unit = CGFloat(unit)
@@ -2598,9 +2713,13 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             item.state = abs(config.unit - unit) < 0.1 ? .on : .off
             sizeMenu.addItem(item)
         }
-        let sizeItem = NSMenuItem(title: "大小(滚轮也可调)", action: nil, keyEquivalent: "")
+        let sizeItem = NSMenuItem(title: "宠物大小(滚轮也可调)", action: nil, keyEquivalent: "")
         sizeItem.submenu = sizeMenu
         menu.addItem(sizeItem)
+
+        let textItem = NSMenuItem(title: "字体大小(气泡,Option+Shift+滚轮)", action: nil, keyEquivalent: "")
+        textItem.submenu = textScaleMenu()
+        menu.addItem(textItem)
 
         let levelMenu = NSMenu()
         let modes = [("normal", "普通窗口(只在本 App 层)"),
@@ -2767,11 +2886,14 @@ func runSnapshot() {
     let activity = PetActivity(rawValue: stateRaw) ?? .idle
     let toolArg = argumentValue("--tool") ?? "Bash"
     let config = ConfigStore.load()
+    let textScale = Double(argumentValue("--text-scale") ?? "\(config.textScale ?? 1.0)") ?? (config.textScale ?? 1.0)
     _ = NSApplication.shared
     let snapshot = syntheticSnapshot(percentage: mood)
     let view = makePetView(unit: unit, page: page, renewalDay: config.renewalDay, snapshot: snapshot)
     view.renewalDateString = config.renewalDate
     view.planCycle = config.planCycle
+    view.textScale = CGFloat(textScale)
+    view.frame = NSRect(origin: .zero, size: view.desiredSize())
     view.setActivity(activity, tool: activity == .tool ? toolArg : nil)
     let ok = renderPNG(view: view, to: path)
     print(ok ? "snapshot written: \(path)" : "snapshot failed")
@@ -2784,6 +2906,7 @@ final class RecordingPetDelegate: NSObject, PetViewDelegate {
     func petViewCyclePage(_ view: PetView) { events.append("cycle") }
     func petViewRequestQuit(_ view: PetView) { events.append("quit") }
     func petViewAdjustScale(_ view: PetView, delta: Double) { events.append("scale:\(delta)") }
+    func petViewAdjustTextScale(_ view: PetView, delta: Double) { events.append("textScale:\(delta)") }
     func petViewDidFinishDrag(_ view: PetView) { events.append("drag") }
     func petViewRequestMenu(_ view: PetView, event: NSEvent) { events.append("menu") }
 }
@@ -2841,6 +2964,7 @@ func runSelfTest(outDir: String?) {
                            snapshot: syntheticSnapshot(percentage: 28))
     view.renewalDateString = config.renewalDate
     view.planCycle = config.planCycle
+    view.textScale = CGFloat(config.textScale ?? 1.0)
     let size = view.desiredSize()
     let panel = NSPanel(contentRect: NSRect(origin: NSPoint(x: 120, y: 120), size: size),
                         styleMask: [.borderless, .nonactivatingPanel],
@@ -2881,9 +3005,8 @@ func runSelfTest(outDir: String?) {
     let crab = layout["crab"] as? [String: CGFloat] ?? [:]
     let hitCrabPoint = (x: (crab["x"] ?? 0) + (crab["w"] ?? 0) / 2, y: (crab["y"] ?? 0) + (crab["h"] ?? 0) / 2)
     let hitBubblePoint = (x: (bubble["x"] ?? 0) + (bubble["w"] ?? 0) / 2, y: (bubble["y"] ?? 0) + (bubble["h"] ?? 0) / 2)
-    let localScale = view.unit / PetView.baseUnit
-    let crabViewPoint = NSPoint(x: hitCrabPoint.x * localScale, y: hitCrabPoint.y * localScale)
-    let bubbleViewPoint = NSPoint(x: hitBubblePoint.x * localScale, y: hitBubblePoint.y * localScale)
+    let crabViewPoint = NSPoint(x: hitCrabPoint.x, y: hitCrabPoint.y)
+    let bubbleViewPoint = NSPoint(x: hitBubblePoint.x, y: hitBubblePoint.y)
     report["layout"] = layout
     report["hitTest"] = [
         "crabCenter": view.debugHitName(x: crabViewPoint.x, y: crabViewPoint.y),
@@ -2916,8 +3039,8 @@ func runSelfTest(outDir: String?) {
     clicks["bubble"] = recorder.events
     recorder.events = []
     let closeRect = layout["close"] as? [String: CGFloat] ?? [:]
-    clickView(at: NSPoint(x: ((closeRect["x"] ?? 0) + 8) * localScale,
-                          y: ((closeRect["y"] ?? 0) + 8) * localScale))
+    clickView(at: NSPoint(x: (closeRect["x"] ?? 0) + (closeRect["w"] ?? 16) / 2,
+                          y: (closeRect["y"] ?? 0) + (closeRect["h"] ?? 16) / 2))
     clicks["close"] = recorder.events
     recorder.events = []
     clickView(at: NSPoint(x: -10, y: -10))

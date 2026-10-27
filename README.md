@@ -1,4 +1,4 @@
-# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.15)
+# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.16)
 
 > 透明覆盖层 App:只在 **Claude 桌面 App 前台**时出现,限制在 Claude 窗口内容区内,
 > 可拖到窗口内任意位置;不显示在别的 App 上,也没有输入框上方那个灰框 band 宠物。
@@ -21,8 +21,9 @@ cd ~/Desktop/插件工厂/clawd-float-app
 | 点宠物一次(螃蟹/状态牌/气泡下方区域) | 立即刷新额度 + 小碎步,气泡右上角显示「更新中」 |
 | 点气泡 | 翻页:5 小时 → 本周 → 续费 → 套餐 → 峰谷 |
 | 按住拖动 | 在 Claude 窗口内任意拖动,超出边界自动夹回 |
-| **Option + 滚轮** | 调大小;普通滚轮留给 Claude 页面滚动 |
-| 右键 / 菜单栏 🦀 | 刷新、状态演示、大小、显示位置、退出 |
+| **Option + 滚轮** | 调**宠物大小**;普通滚轮留给 Claude 页面滚动 |
+| **Option + Shift + 滚轮** | 调**字体/气泡大小**(独立于宠物) |
+| 右键 / 菜单栏 🦀 | 刷新、状态演示、宠物大小、字体大小、显示位置、退出 |
 
 ## 气泡五页
 
@@ -104,6 +105,7 @@ App 每 0.25s 读一次:
 {
   "anchorMode": "claudeWindow",
   "unit": 14,
+  "textScale": 1.0,
   "renewalDate": "2027-01-24",
   "planCycle": "quarterly",
   "renewalDay": 26,
@@ -116,8 +118,9 @@ App 每 0.25s 读一次:
 - `planCycle`:`monthly` / `quarterly`(季卡)/ `yearly`。
 - `renewalDay`:没配 `renewalDate` 时的每月续费日兜底。
 - `refreshMinutes`:自动刷新间隔,默认 **1 分钟**;点一次宠物可立即强制刷新。
-- `unit`:14 时整窗约 268×244;Option+滚轮或右键菜单可在 8–32 之间调。
-  所有 UI(气泡/文字/状态牌/咖啡杯/工具道具/等待板)都按 unit 等比缩放,不会出现小尺寸裁切或大尺寸重叠。
+- `unit`:控制**宠物大小**(8–32;14 时宠物约 154×121);Option+滚轮或右键「宠物大小」调。
+- `textScale`:控制**气泡字体和气泡尺寸**(0.55–2.2;1.0 默认);Option+Shift+滚轮或右键「字体大小」调。
+  两者相互独立:可以宠物很大字体不变,或字体很大宠物不变。命中区/窗口尺寸会同步重算。
 
 ## 数据与调试
 
@@ -149,7 +152,8 @@ band 插件已禁用,避免两个宠物同时出现。
 - `evidence/clawd-renewal-page.png` — 2027-01-24 · 季卡
 - `evidence/clawd-states.png` — 八种状态动作总览(空闲/思考/工具/工作/等待审批/等待回复/完成/出错)
 - `evidence/clawd-tools.png` — 工具细分动作(9 种 + 未知工具兜底)
-- `evidence/clawd-sizes.png` — 同一 UI 在 unit 8/14/20/32 下的等比缩放
+- `evidence/clawd-sizes.png` — 字体固定 1.0x,只调宠物大小(unit 8/14/20/32)
+- `evidence/clawd-text-scale.png` — 宠物固定 unit=14,只调字体大小(0.85/1.0/1.25/1.5)
 - `evidence/tool-state-test.txt` — 长 WebSearch 保持“搜索中”直到 PostToolUse 的回归记录
 - `evidence/states/peak-offpeak.png` — 峰谷页(非高峰 + 官方时段 + 倒计时)
 - `evidence/flicker-fix.txt` — 切换 App 时 20ms 可见性采样(隐藏后无回弹)
