@@ -1,0 +1,20 @@
+== Claude 前台:桌宠应显示 ==
+Claude
+com.anthropic.claudefordesktop
+PID=58736 OWNER=ClawdFloat NUM=18420 LAYER=3 ON=1 NAME= B={
+    Height = 244;
+    Width = 268;
+
+== Finder 前台:桌宠应自动隐藏 ==
+访达
+com.apple.finder
+PID=58736 OWNER=ClawdFloat NUM=18420 LAYER=3 ON=- NAME= B={
+    Height = 244;
+    Width = 268;
+
+== 回到 Claude 前台:桌宠应自动出现 ==
+Claude
+com.anthropic.claudefordesktop
+PID=58736 OWNER=ClawdFloat NUM=18420 LAYER=3 ON=1 NAME= B={
+    Height = 244;
+    Width = 268;

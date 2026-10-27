@@ -1,0 +1,22 @@
+== 10:25-10:29 活跃会话 bf34 事件 ==
+10:24:31 tool PreToolUse Bash
+10:24:33 working PostToolUse Bash
+10:25:04 done Stop 
+10:25:39 thinking UserPromptSubmit 
+10:25:54 tool PreToolUse Bash
+10:25:56 working PostToolUse Bash
+10:26:05 tool PreToolUse Bash
+10:26:07 working PostToolUse Bash
+
+== App 实际切换(最后一条 working 之后 4s 无新工具 → thinking) ==
+2026-10-27T02:25:11Z activity -> idle
+2026-10-27T02:25:39Z activity -> thinking
+2026-10-27T02:25:54Z activity -> tool tool=Bash
+2026-10-27T02:25:54Z activity -> working tool=Bash
+2026-10-27T02:26:05Z activity -> tool tool=Bash
+2026-10-27T02:26:06Z activity -> working tool=Bash
+2026-10-27T02:27:07Z activity -> working tool=Bash
+2026-10-27T02:29:53Z activity -> thinking
+
+== 截图 ==
+evidence/in-claude-thinking-live.png: Claude UI 底部显示 'Thinking',桌宠状态牌显示 '思考中'

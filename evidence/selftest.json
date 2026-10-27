@@ -1,0 +1,115 @@
+{
+  "anchor" : {
+    "claudeWindowFound" : false,
+    "mode" : "claudeWindow"
+  },
+  "auth" : {
+    "host" : "https:\/\/open.bigmodel.cn",
+    "ok" : true,
+    "source" : "cc-switch",
+    "tokenLength" : 49
+  },
+  "clickRouting" : {
+    "bubble" : [
+      "cycle"
+    ],
+    "close" : [
+      "quit"
+    ],
+    "crab" : [
+      "refresh"
+    ],
+    "outside" : [
+
+    ]
+  },
+  "hitTest" : {
+    "bubbleCenter" : "bubble",
+    "crabCenter" : "crab",
+    "outside" : "none"
+  },
+  "interactionOK" : true,
+  "layout" : {
+    "aspectOK" : true,
+    "bubble" : {
+      "h" : 88,
+      "w" : 248,
+      "x" : 10,
+      "y" : 10
+    },
+    "close" : {
+      "h" : 16,
+      "w" : 16,
+      "x" : 236,
+      "y" : 16
+    },
+    "crab" : {
+      "h" : 121.33333333333333,
+      "w" : 154,
+      "x" : 104,
+      "y" : 112
+    },
+    "crabAspect" : 1.2692307692307694,
+    "targetAspect" : 1.2692000000000001,
+    "windowSize" : {
+      "h" : 243.33333333333331,
+      "w" : 268
+    }
+  },
+  "peak" : {
+    "discount" : "0.5x",
+    "isPeak" : false,
+    "label" : "非高峰",
+    "note" : "距高峰 16时",
+    "rule" : "周一至五 14:00–18:00 为高峰"
+  },
+  "quota" : {
+    "fiveHour" : {
+      "percentage" : 22,
+      "resetAt" : 1793117942305,
+      "total" : 28000,
+      "used" : 6239
+    },
+    "level" : "MAX",
+    "ok" : true,
+    "source" : "cc-switch",
+    "weekly" : {
+      "percentage" : 40,
+      "resetAt" : 1793414092978,
+      "total" : 140000,
+      "used" : 55821
+    },
+    "worstPercentage" : 40
+  },
+  "snapshots" : [
+    "evidence\/clawd-mood-28.png",
+    "evidence\/clawd-mood-60.png",
+    "evidence\/clawd-mood-85.png",
+    "evidence\/clawd-mood-97.png",
+    "evidence\/clawd-page-0-5h.png",
+    "evidence\/clawd-page-1-week.png",
+    "evidence\/clawd-page-2-renewal.png",
+    "evidence\/clawd-page-3-status.png"
+  ],
+  "window" : {
+    "backgroundColorAlpha" : 0,
+    "cgWindowAlpha" : 1,
+    "cgWindowBounds" : {
+      "Height" : 244,
+      "Width" : 268,
+      "X" : 120,
+      "Y" : 748
+    },
+    "cgWindowOnscreen" : true,
+    "collectionBehavior" : 0,
+    "frame" : {
+      "height" : 244,
+      "width" : 268,
+      "x" : 120,
+      "y" : 120
+    },
+    "isOpaque" : false,
+    "level" : 0,
+    "visible" : true
+  }
+}

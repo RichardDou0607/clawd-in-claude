@@ -1,0 +1,100 @@
+gui/501/com.richarddou.clawdfloat = {
+	active count = 4
+	path = /Users/richard_dou/Library/LaunchAgents/com.richarddou.clawdfloat.plist
+	type = LaunchAgent
+	state = running
+
+	program = /Users/richard_dou/Desktop/插件工厂/clawd-float-app/build/ClawdFloat
+	arguments = {
+		/Users/richard_dou/Desktop/插件工厂/clawd-float-app/build/ClawdFloat
+	}
+
+	stdout path = /Users/richard_dou/Library/Application Support/ClawdFloat/launchd.out.log
+	stderr path = /Users/richard_dou/Library/Application Support/ClawdFloat/launchd.err.log
+	inherited environment = {
+		NODE_EXTRA_CA_CERTS => /Users/richard_dou/.dsh/certs/steamtools-ca.pem
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.ieFgzTREqh/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		XPC_SERVICE_NAME => com.richarddou.clawdfloat
+	}
+
+	domain = gui/501 [100022]
+	asid = 100022
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 1
+	pid = 54670
+	immediate reason = speculative
+	forks = 3
+	execs = 1
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	checked allocations = 0 (queried = 1)
+	checked allocations reason = no host
+	checked allocations flags = 0x0
+	last exit code = (never exited)
+
+	pid-local endpoints = {
+		"com.apple.coredrag" = {
+			port = 0x10fcd3
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+		"com.apple.tsm.portname" = {
+			port = 0x158663
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+		"com.apple.axserver" = {
+			port = 0x1201eb
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+	}
+
+	resource coalition = {
+		ID = 76943
+		type = resource
+		state = active
+		active count = 1
+		name = com.richarddou.clawdfloat
+	}
+
+	jetsam coalition = {
+		ID = 76944
+		type = jetsam
+		state = active
+		active count = 1
+		name = com.richarddou.clawdfloat
+	}
+
+	spawn type = interactive (4)
+	jetsam priority = 40
+	jetsam memory limit (active) = (unlimited)
+	jetsam memory limit (inactive) = (unlimited)
+	jetsamproperties category = daemon
+	jetsam thread limit = 32
+	cpumon = default
+	job state = running
+	sanitizer flags = 0x0
+
+	properties = runatload | inferred program
+}

@@ -1,0 +1,21 @@
+== 活跃会话 bf34 的 hook 事件(本地时间) ==
+10:21:06 tool PreToolUse Read bf34af85
+10:21:06 working PostToolUse Read bf34af85
+10:21:06 tool PreToolUse Read bf34af85
+10:21:06 working PostToolUse Read bf34af85
+10:21:22 tool PreToolUse Read bf34af85
+10:21:22 working PostToolUse Read bf34af85
+10:21:23 tool PreToolUse Read bf34af85
+10:21:23 working PostToolUse Read bf34af85
+10:21:23 tool PreToolUse Read bf34af85
+10:21:23 working PostToolUse Read bf34af85
+
+== App 实际状态切换 ==
+2026-10-27T02:20:12Z activity -> tool tool=Bash
+2026-10-27T02:20:12Z activity -> working tool=Bash
+2026-10-27T02:20:17Z activity -> thinking
+2026-10-27T02:20:31Z activity -> tool tool=Bash
+2026-10-27T02:20:31Z activity -> working tool=Bash
+2026-10-27T02:20:41Z activity -> tool tool=Bash
+2026-10-27T02:20:41Z activity -> working tool=Bash
+2026-10-27T02:21:06Z activity -> working tool=Read

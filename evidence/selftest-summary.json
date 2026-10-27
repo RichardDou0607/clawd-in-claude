@@ -1,0 +1,62 @@
+{
+  "auth": {
+    "host": "https://open.bigmodel.cn",
+    "ok": true,
+    "source": "cc-switch",
+    "tokenLength": 49
+  },
+  "quota": {
+    "fiveHour": {
+      "percentage": 51,
+      "resetAt": 1793012971473,
+      "total": 28000,
+      "used": 14306
+    },
+    "level": "MAX",
+    "ok": true,
+    "source": "cc-switch",
+    "weekly": {
+      "percentage": 26,
+      "resetAt": 1793414092978,
+      "total": 140000,
+      "used": 35807
+    },
+    "worstPercentage": 51
+  },
+  "window": {
+    "backgroundColorAlpha": 0,
+    "cgWindowAlpha": 1,
+    "cgWindowBounds": {
+      "Height": 228,
+      "Width": 268,
+      "X": 120,
+      "Y": 764
+    },
+    "cgWindowOnscreen": true,
+    "collectionBehavior": 0,
+    "frame": {
+      "height": 228,
+      "width": 268,
+      "x": 120,
+      "y": 120
+    },
+    "isOpaque": false,
+    "level": 0,
+    "visible": true
+  },
+  "aspectOK": true,
+  "interactionOK": true,
+  "clickRouting": {
+    "bubble": [
+      "cycle"
+    ],
+    "close": [
+      "quit"
+    ],
+    "crab": [
+      "refresh"
+    ],
+    "outside": []
+  },
+  "snapshots": 8
+}

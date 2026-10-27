@@ -1,0 +1,8 @@
+== 切换 App 时 CGWindowList 可见性采样(20ms) ==
+samples: 128
+runs: [('1', 35), ('0', 93)] (1=可见, 0=隐藏)
+after first hide any 1? False
+
+== 测试步骤 ==
+Claude 前台(桌宠可见)→ 激活 Finder → 继续采样 3.2s
+结论: 隐藏后没有再次出现(0 帧闪烁);切换回来会延迟 0.28s 再显示,避免过渡帧。

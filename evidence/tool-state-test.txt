@@ -1,0 +1,7 @@
+== 模拟长 WebSearch:PreToolUse 后等待 3s(无 Post)应保持 搜索中 ==
+activity -> tool tool=WebSearch
+（等待 3 秒，没有 working 切换）
+== 收到 PostToolUse 后才切 working ==
+activity -> working tool=WebSearch
+
+真实 hook 事件曾出现 WebSearch 持续 18 秒(14:13:49 → 14:14:27);修复前 0.6s 后就变 working/thinking。
