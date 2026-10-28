@@ -2047,6 +2047,18 @@ final class ClaudeWindowTracker {
     static func isClaudeFrontmost() -> Bool {
         NSWorkspace.shared.frontmostApplication?.bundleIdentifier == claudeBundleID
     }
+
+    static func isClaudeRunning() -> Bool {
+        NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == claudeBundleID && !$0.isTerminated }
+    }
+
+    static func isFullscreenBounds(_ cgBounds: CGRect) -> Bool {
+        // Claude 原生全屏:窗口宽度占满屏幕,高度到 visibleFrame(菜单栏仍可能在)
+        NSScreen.screens.contains { screen in
+            abs(cgBounds.width - screen.frame.width) < 4 &&
+            cgBounds.height >= screen.visibleFrame.height - 4
+        }
+    }
 }
 
 /// 读取 Claude Code hooks 写入的状态文件(claude-activity.json),
@@ -2136,6 +2148,10 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
     private let claudeTracker = ClaudeWindowTracker()
     private let activityWatcher = ClaudeActivityWatcher()
     private var claudeWindow: ClaudeWindowTracker.Info?
+    /// 记录最近一次看到的 Claude 是否处于原生全屏(切到别的 Space 后 tracker 看不到窗口,需要缓存)
+    private var lastClaudeFullscreen = false
+    /// Claude 前台时的最后可见位置;切到别的桌面后用它把面板放回同一个屏幕位置
+    private var lastVisibleFrame: NSRect?
     private var demoStateUntil: Date?
     private var demoStateTimer: Timer?
     private var manuallyHidden = false
@@ -2210,12 +2226,17 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         claudeTracker.start { [weak self] info in
             guard let self = self else { return }
             let frameChanged = info?.cgBounds != self.claudeWindow?.cgBounds
+            if let info = info {
+                self.lastClaudeFullscreen = ClaudeWindowTracker.isFullscreenBounds(info.cgBounds)
+            } else if !ClaudeWindowTracker.isClaudeRunning() {
+                self.lastClaudeFullscreen = false
+            }
             self.claudeWindow = info
-            guard info != nil else {
-                if self.config.anchorMode == "claudeWindow" { self.panel.orderOut(nil) }
+            if info == nil, !self.shouldKeepAcrossDesktops() {
+                self.hidePanelNow()
                 return
             }
-            if self.config.anchorMode == "claudeWindow", frameChanged {
+            if self.config.anchorMode == "claudeWindow", info != nil, frameChanged {
                 self.repositionInClaude()
             }
             self.applyVisibility()
@@ -2237,6 +2258,9 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { [weak self] in
                     self?.applyVisibility()
                 }
+            } else if self.shouldKeepAcrossDesktops() {
+                // Claude 正在原生全屏:切到别的桌面也保持桌宠可见(用户明确开了 allSpaces)
+                self.applyVisibility()
             } else {
                 // 切到任何其他 App:立刻隐藏,并短暂禁止 tracker 回调把它重新 orderFront
                 self.suppressShowUntil = Date().addingTimeInterval(0.9)
@@ -2251,7 +2275,29 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             guard let self = self else { return }
             if let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                app.bundleIdentifier == ClaudeWindowTracker.claudeBundleID {
-                self.suppressShowUntil = Date().addingTimeInterval(0.9)
+                if self.shouldKeepAcrossDesktops() {
+                    self.applyVisibility()
+                } else {
+                    self.suppressShowUntil = Date().addingTimeInterval(0.9)
+                    self.hidePanelNow()
+                }
+            }
+        }
+        // Space 切换:Claude 原生全屏时把面板重新放回当前 Space 的同一屏幕位置
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            if self.shouldKeepAcrossDesktops() {
+                self.applyAnchoredWindowBehavior()
+                if let last = self.lastVisibleFrame { self.panel.setFrame(last, display: true) }
+                self.panel.alphaValue = 1
+                self.panel.orderOut(nil)
+                self.panel.orderFrontRegardless()
+                self.panelShown = true
+            } else if self.config.anchorMode == "claudeWindow",
+                      !ClaudeWindowTracker.isClaudeFrontmost() {
                 self.hidePanelNow()
             }
         }
@@ -2300,13 +2346,23 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             // 先设 isFloatingPanel,再设 level;反过来 AppKit 可能把 level 重置回 floating。
             panel.isFloatingPanel = true
             panel.level = .statusBar
-            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         default:
             panel.isFloatingPanel = true
             panel.level = .floating
             panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         }
         log("anchored behavior mode=\(config.levelMode) level=\(panel.level.rawValue) cb=\(panel.collectionBehavior.rawValue)")
+    }
+
+    /// Claude 原生全屏 + allSpaces 时,即使切到别的桌面/别的 App 也保持桌宠可见。
+    /// 不是全屏时仍然维持原来的「只在 Claude 前台显示」。
+    private func shouldKeepAcrossDesktops() -> Bool {
+        guard config.anchorMode == "claudeWindow",
+              config.levelMode == "allSpaces",
+              lastClaudeFullscreen,
+              ClaudeWindowTracker.isClaudeRunning() else { return false }
+        return true
     }
 
     private func applyVisibility() {
@@ -2316,15 +2372,29 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             return
         }
         if config.anchorMode == "claudeWindow" {
-            guard claudeWindow != nil,
-                  ClaudeWindowTracker.isClaudeFrontmost(),
-                  Date() >= suppressShowUntil else {
+            let keepAcross = shouldKeepAcrossDesktops()
+            let claudeFront = ClaudeWindowTracker.isClaudeFrontmost()
+            if !claudeFront && !keepAcross {
                 hidePanelNow()
                 return
             }
+            if !keepAcross {
+                guard claudeWindow != nil, Date() >= suppressShowUntil else {
+                    hidePanelNow()
+                    return
+                }
+            }
             applyAnchoredWindowBehavior()
-            repositionInClaude()
-            if !panelShown || !panel.isVisible {
+            if claudeFront, claudeWindow != nil {
+                repositionInClaude()
+            } else if keepAcross, let last = lastVisibleFrame {
+                panel.setFrame(last, display: true)
+            }
+            if keepAcross {
+                panel.alphaValue = 1
+                panel.orderFrontRegardless()
+                panelShown = true
+            } else if !panelShown || !panel.isVisible {
                 panel.alphaValue = 1
                 panel.orderFrontRegardless()
                 panelShown = true
@@ -2340,10 +2410,19 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         rebuildStatusMenu()
     }
 
+    /// 全屏 Space 里 CGWindow 可能带巨大的 Space 偏移;锚定时统一用屏幕 frame,避免把宠物算到屏幕外。
+    private func effectiveClaudeCG(_ cg: CGRect) -> CGRect {
+        if ClaudeWindowTracker.isFullscreenBounds(cg),
+           let screen = NSScreen.screens.first(where: { abs($0.frame.width - cg.width) < 4 }) {
+            return screen.frame
+        }
+        return cg
+    }
+
     private func repositionInClaude(force: Bool = false) {
         guard let claude = claudeWindow, !petView.isDragging else { return }
         let size = panel.frame.size
-        let cg = claude.cgBounds
+        let cg = effectiveClaudeCG(claude.cgBounds)
         var dx = CGFloat(config.anchorDX ?? Double(cg.width - size.width - 36))
         var dy = CGFloat(config.anchorDY ?? Double(cg.height - size.height - 44))
         dx = min(max(dx, 6), max(6, cg.width - size.width - 6))
@@ -2356,6 +2435,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         if force || abs(panel.frame.origin.x - origin.x) > 0.5 || abs(panel.frame.origin.y - origin.y) > 0.5 {
             panel.setFrameOrigin(origin)
         }
+        lastVisibleFrame = panel.frame
     }
 
     private func clampToCurrentMode(_ origin: NSPoint) -> NSPoint {
@@ -2363,7 +2443,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         guard config.anchorMode == "claudeWindow", let cg = claudeWindow?.cgBounds else {
             return constrainOrigin(origin, size: size)
         }
-        return clampOriginToClaude(origin, size: size, claudeCG: cg)
+        return clampOriginToClaude(origin, size: size, claudeCG: effectiveClaudeCG(cg))
     }
 
     // 菜单栏常驻小螃蟹:窗口被别的 App 盖住时也能找到它 / 退出

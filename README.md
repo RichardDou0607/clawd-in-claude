@@ -1,4 +1,4 @@
-# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.17)
+# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.18)
 
 > 透明覆盖层 App:只在 **Claude 桌面 App 前台**时出现,限制在 Claude 窗口内容区内,
 > 可拖到窗口内任意位置;不显示在别的 App 上,也没有输入框上方那个灰框 band 宠物。
@@ -123,8 +123,9 @@ App 每 0.25s 读一次:
 - `textScale`:控制**气泡字体和气泡尺寸**(0.55–2.2;1.0 默认);Option+Shift+滚轮或右键「字体大小」调。
   两者相互独立:可以宠物很大字体不变,或字体很大宠物不变。命中区/窗口尺寸会同步重算。
 - `levelMode`:`normal`=只在当前桌面;`allSpaces`=**所有桌面空间 + Claude 原生全屏**。
-  allSpaces 会把面板设为 statusBar 级 + `.canJoinAllSpaces + .fullScreenAuxiliary`,
-  所以 Claude 进入全屏、切到别的桌面空间时桌宠也能跟着显示;仍然只在 Claude 前台时可见。
+  allSpaces 会把面板设为 statusBar 级 + `.canJoinAllSpaces + .fullScreenAuxiliary + .stationary`;
+  **Claude 原生全屏时,即使切到别的桌面/别的 App,桌宠也会保持可见**;
+  退出全屏后恢复普通规则(只在 Claude 前台显示)。
 
 ## 数据与调试
 
@@ -144,7 +145,8 @@ band 插件已禁用,避免两个宠物同时出现。
 ## 已知边界
 
 - 覆盖层是独立窗口(不是 Claude 进程内嵌 UI),Claude 必须运行且前台;
-- 跟随窗口约 0.3s 延迟;Claude 原生全屏已支持(需 `levelMode=allSpaces`);多显示器仅主屏验证;
+- 跟随窗口约 0.3s 延迟;Claude 原生全屏已支持(需 `levelMode=allSpaces`),全屏时可跨桌面保持;
+  多显示器仅主屏验证;
 - 续费日以你给的 `2027-01-24` 为准,季卡按 3 个月滚动;官方接口不提供账单日;
 - 未签名/未公证;只读 CGWindow owner/bounds,不读屏幕内容。
 
@@ -159,6 +161,7 @@ band 插件已禁用,避免两个宠物同时出现。
 - `evidence/clawd-sizes.png` — 字体固定 1.0x,只调宠物大小(unit 8/14/20/32)
 - `evidence/clawd-text-scale.png` — 宠物固定 unit=14,只调字体大小(0.85/1.0/1.25/1.5)
 - `evidence/fullscreen-overlay.png` — Claude 原生全屏下桌宠/气泡覆盖在内容上(allSpaces)
+- `evidence/cross-desktop-fullscreen.png` — Claude 全屏后切到另一个桌面的截图(桌宠仍显示)
 - `evidence/tool-state-test.txt` — 长 WebSearch 保持“搜索中”直到 PostToolUse 的回归记录
 - `evidence/states/peak-offpeak.png` — 峰谷页(非高峰 + 官方时段 + 倒计时)
 - `evidence/flicker-fix.txt` — 切换 App 时 20ms 可见性采样(隐藏后无回弹)

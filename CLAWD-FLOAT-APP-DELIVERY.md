@@ -1,5 +1,23 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.17)
+# Clawd 桌宠 · 状态动作版交付报告(v1.18)
 
+> **v1.18 Claude 全屏时跨桌面保持(2026-10-28 15:45):**
+> v1.17 只解决了“全屏时能显示”,但 Claude 全屏后按 Ctrl+←/→ 切到别的桌面,桌宠还是会消失:
+> - 全屏判定用了 `screen.frame.height`(1112),而 Claude 全屏窗口实际是
+>   `visibleFrame.height`(1074),所以 `lastClaudeFullscreen` 一直是 false;
+> - tracker 只用 `.optionOnScreenOnly`,切到别的 Space 后看不到 Claude 窗口,直接 orderOut;
+> - 全屏 Space 的 CGWindow 坐标带巨大 Space 偏移,面板会被算到屏幕外。
+>
+> 修复:
+> - 全屏判定改为“宽度≈屏幕宽度 且 高度≥visibleFrame”;
+> - 缓存 `lastClaudeFullscreen` + 最后可见 frame,切 Space 后不让 tracker 的 nil 回调隐藏;
+> - 监听 `NSWorkspace.activeSpaceDidChangeNotification`,全屏时重新 orderFront 并把面板放回同一屏幕位置;
+> - `allSpaces` 使用 `statusBar + canJoinAllSpaces + fullScreenAuxiliary + stationary`;
+> - 全屏锚定用屏幕 frame 而不是带 Space 偏移的 CGWindow bounds。
+>
+> 验证:Claude 全屏 → 切到另一个桌面,面板 layer=25、ON=1、位置 X=1340,桌宠/气泡正常显示;
+> 回到 Claude、退出全屏后恢复原规则;普通(非全屏)切桌面仍会隐藏。
+> 证据:`evidence/cross-desktop-fullscreen.png`。
+>
 > **v1.17 Claude 全屏 / 任意桌面修复(2026-10-28 15:30):**
 > 之前“所有桌面空间 + 全屏”在 anchored 模式下完全没生效:锚定窗口的
 > `applyAnchoredWindowBehavior()` 把层级/collectionBehavior 写死成
