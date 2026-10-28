@@ -1,4 +1,4 @@
-# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.18)
+# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.19)
 
 > 透明覆盖层 App:只在 **Claude 桌面 App 前台**时出现,限制在 Claude 窗口内容区内,
 > 可拖到窗口内任意位置;不显示在别的 App 上,也没有输入框上方那个灰框 band 宠物。
@@ -103,7 +103,7 @@ App 每 0.25s 读一次:
 
 ```json
 {
-  "anchorMode": "claudeWindow",
+  "anchorMode": "desktop",
   "levelMode": "allSpaces",
   "unit": 14,
   "textScale": 1.0,
@@ -122,10 +122,12 @@ App 每 0.25s 读一次:
 - `unit`:控制**宠物大小**(8–32;14 时宠物约 154×121);Option+滚轮或右键「宠物大小」调。
 - `textScale`:控制**气泡字体和气泡尺寸**(0.55–2.2;1.0 默认);Option+Shift+滚轮或右键「字体大小」调。
   两者相互独立:可以宠物很大字体不变,或字体很大宠物不变。命中区/窗口尺寸会同步重算。
-- `levelMode`:`normal`=只在当前桌面;`allSpaces`=**所有桌面空间 + Claude 原生全屏**。
+- `anchorMode`:`claudeWindow`=跟随 Claude App 窗口;`desktop`=桌面自由悬浮。
+- `levelMode`:`normal`/`floating`=只在 Claude 前台显示;`allSpaces`=**所有桌面常驻 + 全屏**。
   allSpaces 会把面板设为 statusBar 级 + `.canJoinAllSpaces + .fullScreenAuxiliary + .stationary`;
-  **Claude 原生全屏时,即使切到别的桌面/别的 App,桌宠也会保持可见**;
-  退出全屏后恢复普通规则(只在 Claude 前台显示)。
+  **切到哪个桌面就显示在哪个桌面,即使当前前台不是 Claude**。
+  想要“我正在访问哪个桌面,桌宠就在哪个桌面”请用:
+  `anchorMode=desktop` + `levelMode=allSpaces`(当前配置就是这样)。
 
 ## 数据与调试
 
@@ -145,7 +147,8 @@ band 插件已禁用,避免两个宠物同时出现。
 ## 已知边界
 
 - 覆盖层是独立窗口(不是 Claude 进程内嵌 UI),Claude 必须运行且前台;
-- 跟随窗口约 0.3s 延迟;Claude 原生全屏已支持(需 `levelMode=allSpaces`),全屏时可跨桌面保持;
+- 跟随窗口约 0.3s 延迟;Claude 原生全屏已支持(需 `levelMode=allSpaces`);
+  `anchorMode=desktop` + `levelMode=allSpaces` 时桌宠会常驻当前桌面,可能盖在其它 App 上;
   多显示器仅主屏验证;
 - 续费日以你给的 `2027-01-24` 为准,季卡按 3 个月滚动;官方接口不提供账单日;
 - 未签名/未公证;只读 CGWindow owner/bounds,不读屏幕内容。
@@ -162,6 +165,7 @@ band 插件已禁用,避免两个宠物同时出现。
 - `evidence/clawd-text-scale.png` — 宠物固定 unit=14,只调字体大小(0.85/1.0/1.25/1.5)
 - `evidence/fullscreen-overlay.png` — Claude 原生全屏下桌宠/气泡覆盖在内容上(allSpaces)
 - `evidence/cross-desktop-fullscreen.png` — Claude 全屏后切到另一个桌面的截图(桌宠仍显示)
+- `evidence/current-desktop-allspaces.png` — 桌面自由悬浮 + 所有桌面常驻:切到 Finder 桌面后桌宠仍显示
 - `evidence/tool-state-test.txt` — 长 WebSearch 保持“搜索中”直到 PostToolUse 的回归记录
 - `evidence/states/peak-offpeak.png` — 峰谷页(非高峰 + 官方时段 + 倒计时)
 - `evidence/flicker-fix.txt` — 切换 App 时 20ms 可见性采样(隐藏后无回弹)

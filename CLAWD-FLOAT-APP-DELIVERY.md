@@ -1,5 +1,22 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.18)
+# Clawd 桌宠 · 状态动作版交付报告(v1.19)
 
+> **v1.19 桌宠常驻“我正在访问的桌面”(2026-10-28 15:57):**
+> 你反馈的是:桌宠只出现在 Claude Code 所在的那个桌面/图层,希望切到哪个桌面就出现在哪个桌面。
+> v1.18 只在 “Claude 原生全屏” 时跨桌面保持,普通窗口时依然会跟随 Claude 前台/隐藏。
+>
+> 修复:
+> - `levelMode=allSpaces` 不再要求 Claude 前台或全屏:只要 Claude 在运行,
+>   切到任意桌面/任意 App 都保持桌宠可见;
+> - `anchorMode=desktop` 下 allSpaces 使用 statusBar 层级 25 +
+>   `.canJoinAllSpaces + .fullScreenAuxiliary + .stationary`,并在
+>   `activeSpaceDidChangeNotification` 里重新 orderFront / 回到同一屏幕位置;
+> - 切换 App 的隐藏逻辑只在 `normal/floating` 生效;allSpaces 不再被隐藏;
+> - 缓存最后可见位置,避免全屏 Space 的 CGWindow 坐标偏移把面板算到屏幕外。
+>
+> 当前配置:`anchorMode=desktop`、`levelMode=allSpaces`。
+> 验证:从 DSH/Claude 桌面按 Ctrl+→ 切到 Finder 桌面后,面板 layer=25、ON=1、
+> 位置 X=1270,Y=607,桌宠/气泡正常显示。证据:`evidence/current-desktop-allspaces.png`。
+>
 > **v1.18 Claude 全屏时跨桌面保持(2026-10-28 15:45):**
 > v1.17 只解决了“全屏时能显示”,但 Claude 全屏后按 Ctrl+←/→ 切到别的桌面,桌宠还是会消失:
 > - 全屏判定用了 `screen.frame.height`(1112),而 Claude 全屏窗口实际是

@@ -68,7 +68,7 @@ struct AppConfig: Codable {
     /// 宠物窗口相对 Claude 窗口左上角的偏移(CG 坐标,点);nil = 默认右下角
     var anchorDX: Double? = nil
     var anchorDY: Double? = nil
-    var levelMode: String = "normal" // normal=当前桌面 | floating=当前桌面+浮层 | allSpaces=所有桌面空间+全屏
+    var levelMode: String = "normal" // normal=只在 Claude 前台 | floating=浮层 | allSpaces=所有桌面常驻+全屏
     /// 明确的下次续费日 "yyyy-MM-dd"(优先于 renewalDay;过期后按 planCycle 往后滚)
     var renewalDate: String? = nil
     /// monthly | quarterly | yearly(季卡 = quarterly)
@@ -84,7 +84,7 @@ struct AppConfig: Codable {
     var levelModeLabel: String {
         switch levelMode {
         case "floating": return "当前桌面 + 浮于普通窗口之上"
-        case "allSpaces": return "所有桌面空间 + 全屏"
+        case "allSpaces": return "所有桌面常驻 + 全屏"
         default: return "当前桌面(跟随 Claude)"
         }
     }
@@ -2236,7 +2236,9 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
                 self.hidePanelNow()
                 return
             }
-            if self.config.anchorMode == "claudeWindow", info != nil, frameChanged {
+            if self.config.anchorMode == "claudeWindow", info != nil, frameChanged,
+               ClaudeWindowTracker.isClaudeFrontmost() {
+                // 只有 Claude 在前台时才按它的窗口重算位置;切到别的桌面时不要用带 Space 偏移的坐标把面板移出屏幕
                 self.repositionInClaude()
             }
             self.applyVisibility()
@@ -2290,14 +2292,17 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         ) { [weak self] _ in
             guard let self = self else { return }
             if self.shouldKeepAcrossDesktops() {
-                self.applyAnchoredWindowBehavior()
+                if self.config.anchorMode == "claudeWindow" {
+                    self.applyAnchoredWindowBehavior()
+                } else {
+                    self.applyLevelMode()
+                }
                 if let last = self.lastVisibleFrame { self.panel.setFrame(last, display: true) }
                 self.panel.alphaValue = 1
                 self.panel.orderOut(nil)
                 self.panel.orderFrontRegardless()
                 self.panelShown = true
-            } else if self.config.anchorMode == "claudeWindow",
-                      !ClaudeWindowTracker.isClaudeFrontmost() {
+            } else if !ClaudeWindowTracker.isClaudeFrontmost() {
                 self.hidePanelNow()
             }
         }
@@ -2355,14 +2360,16 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         log("anchored behavior mode=\(config.levelMode) level=\(panel.level.rawValue) cb=\(panel.collectionBehavior.rawValue)")
     }
 
-    /// Claude 原生全屏 + allSpaces 时,即使切到别的桌面/别的 App 也保持桌宠可见。
-    /// 不是全屏时仍然维持原来的「只在 Claude 前台显示」。
+    /// allSpaces = 桌宠常驻所有桌面:切到哪个桌面就显示在哪个桌面,
+    /// 即使当前前台不是 Claude 也保持可见(只要 Claude 还在运行且拿到过位置)。
+    /// normal/floating 仍然维持「只在 Claude 前台显示」。
     private func shouldKeepAcrossDesktops() -> Bool {
-        guard config.anchorMode == "claudeWindow",
-              config.levelMode == "allSpaces",
-              lastClaudeFullscreen,
+        guard config.levelMode == "allSpaces",
               ClaudeWindowTracker.isClaudeRunning() else { return false }
-        return true
+        if config.anchorMode == "claudeWindow" {
+            return claudeWindow != nil || lastVisibleFrame != nil
+        }
+        return true // desktop 模式只要 allSpaces 就常驻当前桌面
     }
 
     private func applyVisibility() {
@@ -2401,7 +2408,12 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             }
         } else {
             applyLevelMode()
-            if !panelShown || !panel.isVisible {
+            if config.levelMode == "allSpaces" {
+                panel.alphaValue = 1
+                panel.orderFrontRegardless()
+                panelShown = true
+                lastVisibleFrame = panel.frame
+            } else if !panelShown || !panel.isVisible {
                 panel.alphaValue = 1
                 panel.orderFrontRegardless()
                 panelShown = true
@@ -2477,7 +2489,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         let levelMenu = NSMenu()
         for (mode, title) in [("normal", "当前桌面(跟随 Claude)"),
                               ("floating", "当前桌面 + 浮于普通窗口之上"),
-                              ("allSpaces", "所有桌面空间 + 全屏")] {
+                              ("allSpaces", "所有桌面常驻 + 全屏")] {
             let entry = NSMenuItem(title: title, action: #selector(menuLevel(_:)), keyEquivalent: "")
             entry.target = self
             entry.representedObject = mode
@@ -2591,9 +2603,9 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             panel.isFloatingPanel = true
             panel.collectionBehavior = [.moveToActiveSpace]
         case "allSpaces":
-            panel.level = .floating
             panel.isFloatingPanel = true
-            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.level = .statusBar
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         default:
             panel.level = .normal
             panel.isFloatingPanel = false
@@ -2776,6 +2788,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
 
     func petViewDidFinishDrag(_ view: PetView) {
         saveWindowPosition()
+        lastVisibleFrame = panel.frame
     }
 
     func petViewRequestMenu(_ view: PetView, event: NSEvent) {
@@ -2813,7 +2826,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         let levelMenu = NSMenu()
         let modes = [("normal", "当前桌面(跟随 Claude)"),
                      ("floating", "当前桌面 + 浮于普通窗口之上"),
-                     ("allSpaces", "所有桌面空间 + 全屏")]
+                     ("allSpaces", "所有桌面常驻 + 全屏")]
         for (mode, title) in modes {
             let item = NSMenuItem(title: title, action: #selector(menuLevel(_:)), keyEquivalent: "")
             item.target = self
