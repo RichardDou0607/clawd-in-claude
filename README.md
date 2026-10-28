@@ -1,16 +1,29 @@
-# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.20)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.21)
 
-> 透明覆盖层 App:只在 **Claude 桌面 App 前台**时出现,限制在 Claude 窗口内容区内,
-> 可拖到窗口内任意位置;不显示在别的 App 上,也没有输入框上方那个灰框 band 宠物。
+> macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
+> 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
+>
+> 两种显示方式:
+> - **跟随 Claude 窗口**(锚定模式):只在 Claude App 前台出现,限制在窗口内容区内,可拖到窗口内任意位置;
+> - **桌面自由悬浮 + 所有桌面常驻**:切到哪个桌面就显示在哪个桌面,可覆盖在其他 App 上。
+>
+> **多会话兼容**:同时开多个 Claude Code 会话时,按
+> 等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲
+> 聚合显示,不会互相覆盖。详见 [多会话兼容](#多会话兼容)。
+> 输入框上方的灰框 band 宠物已禁用。
 
 ## 快速开始
 
+需要 macOS + Xcode Command Line Tools,以及已安装的 Claude Desktop App。
+
 ```bash
-cd ~/Desktop/插件工厂/clawd-float-app
-./run.sh          # 启动(已编译;也可直接 ./build/ClawdFloat)
+cd clawd-float-app
+./build.sh        # 首次编译(生成 build/ClawdFloat)
+./run.sh          # 启动
 ```
 
-- 切到 Claude 前台即可看到;切到 Finder/其他 App **立刻隐藏**(不会闪一下),切回 Claude 延迟约 0.28s 再显示;
+- 跟随 Claude 窗口模式:切到 Finder/其他 App **立刻隐藏**(不会闪一下),切回 Claude 延迟约 0.28s 再显示;
+- 桌面自由悬浮 + `levelMode=allSpaces`:桌宠常驻你当前访问的桌面,切 Space/切 App 都保持可见;
 - 关闭输入框上方的 band 宠物:旧插件 `glm-quota-pet` 已在设置里禁用,并已重启 Claude 卸载;
   想恢复 band 形态再执行 `claude plugin enable glm-quota-pet@glm-quota-pet-market`(需重启会话)。
 
