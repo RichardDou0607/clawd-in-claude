@@ -68,7 +68,7 @@ struct AppConfig: Codable {
     /// 宠物窗口相对 Claude 窗口左上角的偏移(CG 坐标,点);nil = 默认右下角
     var anchorDX: Double? = nil
     var anchorDY: Double? = nil
-    var levelMode: String = "normal" // 仅 desktop 模式: normal | floating | allSpaces
+    var levelMode: String = "normal" // normal=当前桌面 | floating=当前桌面+浮层 | allSpaces=所有桌面空间+全屏
     /// 明确的下次续费日 "yyyy-MM-dd"(优先于 renewalDay;过期后按 planCycle 往后滚)
     var renewalDate: String? = nil
     /// monthly | quarterly | yearly(季卡 = quarterly)
@@ -83,9 +83,9 @@ struct AppConfig: Codable {
 
     var levelModeLabel: String {
         switch levelMode {
-        case "floating": return "浮于普通窗口之上"
+        case "floating": return "当前桌面 + 浮于普通窗口之上"
         case "allSpaces": return "所有桌面空间 + 全屏"
-        default: return "普通窗口(只在本 App 层)"
+        default: return "当前桌面(跟随 Claude)"
         }
     }
 
@@ -2294,10 +2294,19 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
 
     private func applyAnchoredWindowBehavior() {
         // 只在 Claude 前台时显示,所以可以浮在 Claude 普通窗口之上;不跨 App 显示。
-        // 不要用 canJoinAllSpaces:否则切到其他 Space/App 的一帧里桌宠可能短暂出现。
-        panel.level = .floating
-        panel.isFloatingPanel = true
-        panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        // 默认只跟随当前桌面;用户选“所有桌面空间 + 全屏”时才加入所有 Space/全屏。
+        switch config.levelMode {
+        case "allSpaces":
+            // 先设 isFloatingPanel,再设 level;反过来 AppKit 可能把 level 重置回 floating。
+            panel.isFloatingPanel = true
+            panel.level = .statusBar
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        default:
+            panel.isFloatingPanel = true
+            panel.level = .floating
+            panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        }
+        log("anchored behavior mode=\(config.levelMode) level=\(panel.level.rawValue) cb=\(panel.collectionBehavior.rawValue)")
     }
 
     private func applyVisibility() {
@@ -2386,8 +2395,8 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         menu.addItem(.separator())
 
         let levelMenu = NSMenu()
-        for (mode, title) in [("normal", "普通窗口(只在本 App 层)"),
-                              ("floating", "浮于普通窗口之上"),
+        for (mode, title) in [("normal", "当前桌面(跟随 Claude)"),
+                              ("floating", "当前桌面 + 浮于普通窗口之上"),
                               ("allSpaces", "所有桌面空间 + 全屏")] {
             let entry = NSMenuItem(title: title, action: #selector(menuLevel(_:)), keyEquivalent: "")
             entry.target = self
@@ -2722,8 +2731,8 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         menu.addItem(textItem)
 
         let levelMenu = NSMenu()
-        let modes = [("normal", "普通窗口(只在本 App 层)"),
-                     ("floating", "浮于普通窗口之上"),
+        let modes = [("normal", "当前桌面(跟随 Claude)"),
+                     ("floating", "当前桌面 + 浮于普通窗口之上"),
                      ("allSpaces", "所有桌面空间 + 全屏")]
         for (mode, title) in modes {
             let item = NSMenuItem(title: title, action: #selector(menuLevel(_:)), keyEquivalent: "")
@@ -2759,12 +2768,27 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
     @objc private func menuLevel(_ sender: NSMenuItem) {
         guard let mode = sender.representedObject as? String else { return }
         config.levelMode = mode
-        applyLevelMode()
+        if config.anchorMode == "claudeWindow" {
+            applyAnchoredWindowBehavior()
+            repositionInClaude(force: true)
+            if ClaudeWindowTracker.isClaudeFrontmost() {
+                // 改了 collectionBehavior 后要重新 orderFront,全屏/Space 才会立刻生效
+                panel.orderFrontRegardless()
+                panelShown = true
+            }
+        } else {
+            applyLevelMode()
+        }
         ConfigStore.save(config)
         petView.needsDisplay = true
-        if let levelMenu = statusItem?.menu?.items.compactMap({ $0.submenu }).first {
-            for entry in levelMenu.items {
-                entry.state = (entry.representedObject as? String) == mode ? .on : .off
+        if let menu = statusItem?.menu {
+            for item in menu.items {
+                for entry in item.submenu?.items ?? [] {
+                    if let value = entry.representedObject as? String,
+                       ["normal", "floating", "allSpaces"].contains(value) {
+                        entry.state = value == mode ? .on : .off
+                    }
+                }
             }
         }
     }

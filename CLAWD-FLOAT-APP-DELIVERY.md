@@ -1,5 +1,23 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.16)
+# Clawd 桌宠 · 状态动作版交付报告(v1.17)
 
+> **v1.17 Claude 全屏 / 任意桌面修复(2026-10-28 15:30):**
+> 之前“所有桌面空间 + 全屏”在 anchored 模式下完全没生效:锚定窗口的
+> `applyAnchoredWindowBehavior()` 把层级/collectionBehavior 写死成
+> `floating + moveToActiveSpace`,菜单里的 `levelMode` 被忽略;而且设置顺序是
+> 先 `panel.level` 再 `panel.isFloatingPanel`,AppKit 会把 statusBar 层级重置回 floating。
+>
+> 修复:
+> - `applyAnchoredWindowBehavior()` 现在按 `levelMode` 分支:
+>   - `normal/floating`:floating + `.moveToActiveSpace + .fullScreenAuxiliary`(当前桌面);
+>   - `allSpaces`:先设 `isFloatingPanel`,再设 **statusBar 层级 25** +
+>     `.canJoinAllSpaces + .fullScreenAuxiliary`,覆盖 Claude 原生全屏和其它桌面空间;
+> - 切换菜单后立刻重新应用行为并 `orderFrontRegardless`,不用重启;
+> - 修正“置顶方式”菜单勾选状态更新错误的问题;
+> - 仍然只在 Claude 前台时显示,非 Claude 前台会隐藏。
+>
+> 验证:Claude `AXFullScreen=true` 时,面板 layer=25、ON=1,气泡/桌宠完整覆盖在全屏内容上;
+> 退出再进入全屏均正常;切回普通窗口后仍显示。证据:`evidence/fullscreen-overlay.png`。
+>
 > **v1.16 字体大小与宠物大小独立(2026-10-27 21:50):**
 > 现在有两个独立旋钮:
 > - **宠物大小** `unit`(8–32):控制螃蟹、咖啡杯、工具道具、状态牌、等待板;
