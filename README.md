@@ -17,7 +17,8 @@
 需要 macOS + Xcode Command Line Tools,以及已安装的 Claude Desktop App。
 
 ```bash
-cd clawd-float-app
+git clone https://github.com/RichardDou0607/clawd-in-claude.git
+cd clawd-in-claude
 ./build.sh        # 首次编译(生成 build/ClawdFloat)
 ./run.sh          # 启动
 ```
