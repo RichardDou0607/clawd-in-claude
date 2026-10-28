@@ -1,5 +1,9 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.21)
+# Clawd 桌宠 · 状态动作版交付报告(v1.22)
 
+> **v1.22 删除截图(2026-10-28 16:38):**
+> 应要求删除仓库内全部截图(evidence/ 下的 PNG 等),README 只保留文本回归记录;
+> 为避免公开仓库历史里仍能拿到旧截图,已同步清理 Git 历史并强推 main。
+>
 > **v1.21 公开 README(2026-10-28 16:35):**
 > GitHub 仓库已设为 public;README 顶部补充了多会话状态聚合说明和优先级,
 > 并补充了可直接克隆构建的 Quick Start。
@@ -35,7 +39,6 @@
 >
 > 当前配置:`anchorMode=desktop`、`levelMode=allSpaces`。
 > 验证:从 DSH/Claude 桌面按 Ctrl+→ 切到 Finder 桌面后,面板 layer=25、ON=1、
-> 位置 X=1270,Y=607,桌宠/气泡正常显示。证据:`evidence/current-desktop-allspaces.png`。
 >
 > **v1.18 Claude 全屏时跨桌面保持(2026-10-28 15:45):**
 > v1.17 只解决了“全屏时能显示”,但 Claude 全屏后按 Ctrl+←/→ 切到别的桌面,桌宠还是会消失:
@@ -53,7 +56,6 @@
 >
 > 验证:Claude 全屏 → 切到另一个桌面,面板 layer=25、ON=1、位置 X=1340,桌宠/气泡正常显示;
 > 回到 Claude、退出全屏后恢复原规则;普通(非全屏)切桌面仍会隐藏。
-> 证据:`evidence/cross-desktop-fullscreen.png`。
 >
 > **v1.17 Claude 全屏 / 任意桌面修复(2026-10-28 15:30):**
 > 之前“所有桌面空间 + 全屏”在 anchored 模式下完全没生效:锚定窗口的
@@ -71,7 +73,6 @@
 > - 仍然只在 Claude 前台时显示,非 Claude 前台会隐藏。
 >
 > 验证:Claude `AXFullScreen=true` 时,面板 layer=25、ON=1,气泡/桌宠完整覆盖在全屏内容上;
-> 退出再进入全屏均正常;切回普通窗口后仍显示。证据:`evidence/fullscreen-overlay.png`。
 >
 > **v1.16 字体大小与宠物大小独立(2026-10-27 21:50):**
 > 现在有两个独立旋钮:
@@ -86,7 +87,6 @@
 >
 > 操作:Option+滚轮=宠物大小;**Option+Shift+滚轮=字体大小**;右键/菜单栏也有「宠物大小」「字体大小」菜单。
 > 回归:unit 8/14/20/32 + 字体 0.85/1.0/1.25/1.5 全部无裁切/重叠;非默认字体 1.3 下 selftest 仍通过
-> (窗口 343×270,点击路由正常)。对比图:`evidence/clawd-sizes.png`、`evidence/clawd-text-scale.png`。
 >
 > **v1.15 大小适配修复(2026-10-27 21:10):**
 > 之前气泡、状态牌、咖啡杯、工具道具、等待板都是固定像素尺寸,只有螃蟹跟着 unit 变:
@@ -101,7 +101,6 @@
 > 实测 unit 8 / 14 / 20 / 32:
 > - 窗口 153×139 / 268×243 / 382×347 / 612×556 pt;
 > - 没有裁切、没有重叠;点击路由和透明窗口 selftest 仍通过。
-> 对比图:`evidence/clawd-sizes.png`。
 >
 > **v1.14 工具状态完整/持久化修复(2026-10-27 14:20):**
 > 你看到的 Searching 只闪一下,根因是 App 把 `tool` 状态在 0.6s 后强制改成了 working。
@@ -114,7 +113,6 @@
 >   **更新计划**(TodoWrite/Plan)、**执行技能**(Skill)、**发送中**(SendUserFile);未知工具走通用扳手 + 工具名兜底;
 > - 快速工具仍用 `last_tool` 兜底显示 1.2s,避免轮询跳过;
 > - 回归:长 WebSearch 模拟 Pre 后等 3s,状态保持“搜索中”;Post 后才切 working。证据 `evidence/tool-state-test.txt`;
->   工具图更新为 9 种:`evidence/clawd-tools.png`。
 >
 > **v1.13 峰谷时段展示(2026-10-27 13:45):**
 > 官方文档([套餐概览](https://docs.bigmodel.cn/cn/coding-plan/overview))明确:
@@ -126,7 +124,6 @@
 >   标题旁标注当前积分倍率(0.5x / 1x);
 > - 所有页面左下角常驻 **峰/谷 角标**(橙=峰,蓝=谷),不翻页也能看到;
 > - 状态每分钟随 tick 自动更新,14:00/18:00/周末会自动切换;当前为**非高峰**(距 14:00 还有 19 分钟);
-> - 截图:`evidence/states/peak-offpeak.png`。
 >
 > **v1.12 切换 App 闪一下修复(2026-10-27 10:41):**
 > 原因是切走瞬间的竞态:激活通知先到、frontmost 还没更新,窗口 tracker 又在 0.3s 轮询里
@@ -152,7 +149,6 @@
 > - hook 额外携带 `last_tool/last_tool_ts`;快速工具即使 Pre/Post 几乎同时,也会至少展示 1.2 秒的
 >   「编辑中/读取中…」,不再被轮询跳过;
 > - 之后按原有规则:4 秒没有下一个工具 → 思考中;下一个工具 → 工具状态;
-> - 截图:`evidence/clawd-tools.png`。
 >
 > **v1.10 思考/工作判定修复(2026-10-27 10:30):**
 > 你看到的“正在思考但显示工作中”复现了:10:26:07 最后一个 PostToolUse 写入 working 后,
@@ -164,18 +160,15 @@
 >
 > 回归:同一条活跃会话 bf34 在 10:26:07 之后无工具,App 于 10:29:53 切到 `thinking`;
 > 真实截图里 Claude 底部状态是 `Thinking`,桌宠状态牌同时显示「思考中」
-> (`evidence/in-claude-thinking-live.png`,`evidence/thinking-regression.txt`)。
 >
 > **v1.9 咖啡杯配色调整(2026-10-27):**
 > 你反馈杯子和螃蟹的橙色太接近、容易看错。已重做杯子的装饰:
 > **白瓷杯身 + 蓝色横纹 + 深蓝杯套(白点)+ 蓝色把手 + 深蓝杯垫**,并加了一圈深色描边,
 > 整只杯子与橙色蟹壳明显区分;杯垫/杯口热气/抬杯喝一口的动作保持不变。
-> 截图见 `evidence/states/idle.png`、`evidence/clawd-states.png`。
 >
 > **v1.8 空闲动画改成喝咖啡(2026-10-27):**
 > 空闲时不再只是眨眼/小碎步:桌宠右手端着一杯咖啡(杯垫、橙色杯套、冒着热气),
 > 每约 10 秒抬杯喝一口(杯身倾斜),然后放回杯垫;同时保持眨眼。
-> 状态总览图已更新为「空闲·喝咖啡」:`evidence/clawd-states.png` / `evidence/states/idle.png`。
 > App 已重新编译并运行。
 >
 > **v1.7 活跃会话回归修复(2026-10-27 10:21):**
@@ -187,8 +180,6 @@
 > 现在修正为:**`PostToolUse`/`SubagentStop` → 工作中**,只有刚提交 prompt、首个工具之前才显示思考中;
 > 工具执行中先显示 0.6s 的「调用工具」,然后转「工作中」抱笔记本;Stop 才结束。
 > 以当前活跃会话 bf34af85 做了回归:App 日志从 `tool` → `working` 持续切换,
-> 真实截图里桌宠正在显示「工作中 + 抱笔记本敲键盘」(`evidence/in-claude-working-live.png`、
-> `evidence/in-claude-working-crop.png`),Hook 事件序见 `evidence/activity-regression.txt`。
 >
 > **v1.6 新增两个等待状态(2026-10-27):**
 > 1. **等待审批**:审批板 + 红色「待批」章 + 小手臂扶板 + 抖脚。
@@ -196,8 +187,6 @@
 > 2. **等待回复**:对话气泡 + 三个循环点 + 小手臂扶气泡 + 抖脚。
 >    触发:`Notification`(如 "Claude is waiting for your input"),或 `PreToolUse` 的工具是 `AskUserQuestion`。
 > 3. hooks 安装脚本已加上 `PermissionRequest` 事件;两个新状态同样支持菜单「状态演示」和
->    `--snapshot out.png --state waitingApproval|waitingReply`。
-> 4. 状态图更新为 8 种:`evidence/clawd-states.png`。
 >
 > **v1.5 状态切换修复(2026-10-27):**
 > 你看到的「工作/思考切换不对」确实存在,根因有三点,已修:
@@ -224,7 +213,6 @@
 
 ## 1. 七种状态动作
 
-![状态动作总览](clawd-float-app/evidence/clawd-states.png)
 
 | 状态 | 动作 | 触发(Claude Code hook) |
 | --- | --- | --- |
@@ -250,7 +238,6 @@
 3. **App 读取**:`ClaudeActivityWatcher` 每 0.25s 读文件,状态变化时重置动画相位;
    `done` 展示 6s 自动回空闲,>15 分钟没新事件也回空闲,避免卡在“工作中”。
 4. **手动预览**:右键/菜单栏 🦀 →「状态演示」子菜单;或
-   `./build/ClawdFloat --snapshot out.png --state working`(idle/thinking/tool/working/waiting/done/error)。
 
 ## 3. 验证证据(真机)
 
@@ -259,7 +246,6 @@
 | hooks 真实触发 | ✅ 用 headless Claude 跑一句“Reply with exactly OK”:输出 `OK`,状态文件出现真实 session 事件,最终 `SessionEnd → idle` |
 | 桌面 App 新会话 | ✅ Claude 桌面 Code 页新会话触发 `SessionStart`,写入 `claude-activity.json`(说明 hooks 对 App 也生效) |
 | App 实时切换 | ✅ 写入 working/thinking/… 后 0.25s 内,桌宠切换成笔记本打字/思考气泡等动作 |
-| 状态动作渲染 | ✅ 7 张 `evidence/states/*.png` + 总览 `clawd-states.png` |
 | 原有功能不回退 | ✅ 透明窗口 268×244、额度四页、2027-01-24 季卡、页脚圆点不重叠、拖拽/吸附、band 宠物关闭 |
 | 当前运行 | ✅ App 正在运行;切到 Claude 前台即可看到桌宠 |
 
@@ -298,11 +284,6 @@ cd ~/Desktop/插件工厂/clawd-float-app
     ├── build/ClawdFloat
     ├── README.md
     └── evidence/
-        ├── clawd-states.png               ← 七状态动作总览
-        ├── states/*.png                   ← 每状态大图
-        ├── in-claude-anchored.png         ← 桌宠在 Claude 窗口内
-        ├── clawd-renewal-page.png         ← 2027-01-24 · 季卡
-        ├── clawd-5h-idle.png
         ├── anchor-visibility-proof.txt
         └── selftest.json
 ```

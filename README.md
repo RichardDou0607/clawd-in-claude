@@ -1,4 +1,4 @@
-# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.21)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.22)
 
 > macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
 > 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
@@ -186,24 +186,14 @@ band 插件已禁用,避免两个宠物同时出现。
 
 ## 证据
 
-- `evidence/in-claude-anchored.png` — 桌宠在 Claude 窗口内(标注;无 band 宠物)
-- `evidence/in-claude-overlay-zoom.png` — 局部放大
-- `evidence/clawd-5h-idle.png` — 5h 空闲文案(不再像加载失败)
-- `evidence/clawd-renewal-page.png` — 2027-01-24 · 季卡
-- `evidence/clawd-states.png` — 八种状态动作总览(空闲/思考/工具/工作/等待审批/等待回复/完成/出错)
-- `evidence/clawd-tools.png` — 工具细分动作(9 种 + 未知工具兜底)
-- `evidence/clawd-sizes.png` — 字体固定 1.0x,只调宠物大小(unit 8/14/20/32)
-- `evidence/clawd-text-scale.png` — 宠物固定 unit=14,只调字体大小(0.85/1.0/1.25/1.5)
-- `evidence/fullscreen-overlay.png` — Claude 原生全屏下桌宠/气泡覆盖在内容上(allSpaces)
-- `evidence/cross-desktop-fullscreen.png` — Claude 全屏后切到另一个桌面的截图(桌宠仍显示)
-- `evidence/current-desktop-allspaces.png` — 桌面自由悬浮 + 所有桌面常驻:切到 Finder 桌面后桌宠仍显示
+> 截图已从仓库删除;这里只保留文本回归记录与 selftest 数据。
+
 - `evidence/multi-session-test.txt` — 两个 Claude Code 会话的状态聚合回归(审批/工具/working/done/idle)
 - `evidence/tool-state-test.txt` — 长 WebSearch 保持“搜索中”直到 PostToolUse 的回归记录
-- `evidence/states/peak-offpeak.png` — 峰谷页(非高峰 + 官方时段 + 倒计时)
 - `evidence/flicker-fix.txt` — 切换 App 时 20ms 可见性采样(隐藏后无回弹)
-- `evidence/states/*.png` — 单状态大图
 - `evidence/anchor-visibility-proof.txt` — Claude 前台显示 / 切走隐藏
-- `evidence/selftest.json` — 实时额度、透明窗口、点击路由、吸附边界
+- `evidence/activity-regression.txt` / `thinking-regression.txt` — 状态流转回归
+- `evidence/selftest.json` / `selftest-summary.json` — 实时额度、透明窗口、点击路由、吸附边界
 
 ## 文件
 
