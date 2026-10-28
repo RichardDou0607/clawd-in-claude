@@ -1,5 +1,21 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.19)
+# Clawd 桌宠 · 状态动作版交付报告(v1.20)
 
+> **v1.20 多会话状态兼容(2026-10-28 16:25):**
+> 之前所有 Claude Code 会话共写一个 `claude-activity.json`,谁最后写谁覆盖:
+> 会话 A 在跑长工具时,会话 B 一个 Stop/Idle 就会把桌宠改回空闲/完成;
+> 两个会话同时工作时状态也会来回跳。
+>
+> 现在:
+> - 每个会话写自己的 `sessions/<session_id>.json`(带 `last_tool/last_tool_ts`);
+> - hook 用文件锁串行写,并聚合出全局 `claude-activity.json`,App 仍读同一个文件;
+> - 聚合优先级:`等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲`;
+> - 同优先级取最新事件;SessionEnd 删会话文件;30 分钟无事件视为过期;
+> - 旧版全局状态会在升级后种成第一个会话,避免正在跑的状态丢失。
+>
+> 回归(两个会话 A/B):B 在跑 WebSearch 时 A 发审批 → 显示等待审批;
+> A 继续 Read 工具 → 显示 Read;A Stop 时 B 仍 working → 保持 working;两边都 SessionEnd → idle。
+> 证据:`evidence/multi-session-test.txt`。
+>
 > **v1.19 桌宠常驻“我正在访问的桌面”(2026-10-28 15:57):**
 > 你反馈的是:桌宠只出现在 Claude Code 所在的那个桌面/图层,希望切到哪个桌面就出现在哪个桌面。
 > v1.18 只在 “Claude 原生全屏” 时跨桌面保持,普通窗口时依然会跟随 Claude 前台/隐藏。

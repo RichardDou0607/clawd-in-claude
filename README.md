@@ -1,4 +1,4 @@
-# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.19)
+# Clawd in Claude — 只在 Claude App 窗口里的像素桌宠(v1.20)
 
 > 透明覆盖层 App:只在 **Claude 桌面 App 前台**时出现,限制在 Claude 窗口内容区内,
 > 可拖到窗口内任意位置;不显示在别的 App 上,也没有输入框上方那个灰框 band 宠物。
@@ -88,6 +88,21 @@ App 每 0.25s 读一次:
 > hook 会直接忽略,避免把真实的思考/工具/工作状态冲掉。状态切换日志:
 > `~/Library/Application Support/ClawdFloat/claude-activity.log`(hook 事件)和 `app.log` 里的 `activity ->`。
 
+### 多会话兼容
+
+Claude Code 同时开多个会话/窗口时,状态不再“最后写入的覆盖一切”:
+
+- 每个会话写自己的 `~/Library/Application Support/ClawdFloat/sessions/<session_id>.json`;
+- hook 再聚合出一个全局 `claude-activity.json` 给 App 读取;
+- 聚合优先级:
+  `等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲`;
+- 同优先级取**最新事件**;
+- `SessionEnd` 移除该会话文件;30 分钟无事件的会话视为过期;
+- 因此一个会话在工作时,另一个会话弹审批,桌宠会显示“等待审批”;
+  一个会话 Stop/闲置也不会覆盖另一个会话的“工作中/调用工具”。
+
+无需重装 hooks(脚本路径没变),Claude Code 的下一次事件就会使用新逻辑。
+
 安装/卸载 hooks(只增删含 `clawd-state-hook.py` 的条目,会先备份 settings.json):
 
 ```bash
@@ -133,6 +148,8 @@ App 每 0.25s 读一次:
 
 - **每 1 分钟自动刷新**(配置 `refreshMinutes: 1`);点一次宠物立即强制刷新;
   Key 发现顺序:配置 token → cc-switch 当前 Claude 供应商(仅 GLM host)→ `~/.claude/settings.json` env;
+- 多会话状态文件:`~/Library/Application Support/ClawdFloat/sessions/*.json`;
+  聚合结果仍在 `claude-activity.json`(带 `sessions` 数量);
 - 日志:`~/Library/Application Support/ClawdFloat/app.log`,成功写 `quota ok`,失败写 `quota failed`,
   5h 窗口空闲会写 `quota note: 5h window has no nextResetTime (idle window...)`;
 - 已验证:App 日志全部 `quota ok`;原始接口里 `unit=3` 的条目在窗口未使用时**没有 nextResetTime**
@@ -166,6 +183,7 @@ band 插件已禁用,避免两个宠物同时出现。
 - `evidence/fullscreen-overlay.png` — Claude 原生全屏下桌宠/气泡覆盖在内容上(allSpaces)
 - `evidence/cross-desktop-fullscreen.png` — Claude 全屏后切到另一个桌面的截图(桌宠仍显示)
 - `evidence/current-desktop-allspaces.png` — 桌面自由悬浮 + 所有桌面常驻:切到 Finder 桌面后桌宠仍显示
+- `evidence/multi-session-test.txt` — 两个 Claude Code 会话的状态聚合回归(审批/工具/working/done/idle)
 - `evidence/tool-state-test.txt` — 长 WebSearch 保持“搜索中”直到 PostToolUse 的回归记录
 - `evidence/states/peak-offpeak.png` — 峰谷页(非高峰 + 官方时段 + 倒计时)
 - `evidence/flicker-fix.txt` — 切换 App 时 20ms 可见性采样(隐藏后无回弹)

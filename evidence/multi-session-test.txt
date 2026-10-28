@@ -1,0 +1,20 @@
+== 多会话状态聚合回归 ==
+A+B 同时 thinking(同优先级取最新):
+thinking         tool=-          sessions=1 selected=A
+thinking         tool=-          sessions=2 selected=B
+B 跑 WebSearch,A 工具结束 working(tool 优先):
+tool             tool=WebSearch  sessions=2 selected=B
+tool             tool=WebSearch  sessions=2 selected=B
+A 请求审批(审批优先于 B 的工具):
+waitingApproval  tool=-          sessions=2 selected=A
+A 继续 Read 工具(两会话都有工具,取最新):
+tool             tool=Read       sessions=2 selected=A
+B 工具结束 working(A 仍在跑 Read,tool 优先):
+tool             tool=Read       sessions=2 selected=A
+A Stop(done),B 仍 working(working 优先):
+working          tool=WebSearch  sessions=2 selected=B
+B Stop -> done:
+done             tool=-          sessions=2 selected=B
+A+B SessionEnd -> idle:
+done             tool=-          sessions=1 selected=B
+idle             tool=-          sessions=0 selected=
