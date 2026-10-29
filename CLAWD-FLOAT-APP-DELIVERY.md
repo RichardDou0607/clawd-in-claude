@@ -1,5 +1,18 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.26)
+# Clawd 桌宠 · 状态动作版交付报告(v1.27)
 
+> **v1.27 移除输入框 band 视觉 / 区分原生 buddy(2026-10-29 14:52):**
+> 现象:桌宠启动后输入框上方仍出现一个小 pet。
+> 排查:
+> - `glm-quota-pet` 插件的 band hooks 已从源代码、插件缓存和当前 dev-mod 副本中清空,
+>   band 不再由该插件渲染;
+> - 残留的小 pet 是 **Claude Code 自带的 `/buddy` 彩蛋**,不是本 App/插件。
+>
+> 处理:
+> - 插件保留 enabled 状态作为启动器开关,但 modules 为空,不再画 band/宠物场;
+> - 当前会话执行 `/buddy off` 隐藏原生 buddy;
+> - 在 `~/.claude/CLAUDE.md` 添加全局提醒,要求新会话开始执行 `/buddy off`;
+> - Claude Code 官方暂无持久关闭 buddy 的设置,只能每会话隐藏或靠 CLAUDE.md 提醒。
+>
 > **v1.26 插件 enabled 状态绑定启动器(2026-10-29 14:20):**
 > 需求:Claude 插件页 turn on/off 直接控制桌宠启动器,禁用状态=启动器关闭。
 > 实现:

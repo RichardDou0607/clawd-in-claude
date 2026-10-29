@@ -1,4 +1,4 @@
-# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.26)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.27)
 
 > macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
 > 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
@@ -10,7 +10,8 @@
 > **多会话兼容**:同时开多个 Claude Code 会话时,按
 > 等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲
 > 聚合显示,不会互相覆盖。详见 [多会话兼容](#多会话兼容)。
-> 输入框上方的灰框 band 宠物已禁用。
+> 插件自身的 band 视觉已移除,插件现在只作为启动开关;
+> 输入框上方的原生 `/buddy` 小宠物由 Claude Code 自带,不是本 App/插件(见下文)。
 
 ## 快速开始
 
@@ -80,7 +81,21 @@ claude plugin enable|disable glm-quota-pet@glm-quota-pet-market --scope user
 
 > 禁用插件会立刻停止桌宠;启用插件会立刻拉起桌宠。
 > 如果桌宠已经停止,可以用 `./run.sh` 手动打开,它会先确保插件处于启用状态。
-> 插件自身的 band/宠物场 UI 是否加载仍由 Claude Code 会话决定,可能需要重启会话。
+> `glm-quota-pet` 插件的 band/宠物场视觉 hooks 已移除,现在它只作为启动开关;
+> 需要 Claude Code 会话重启一次让旧 UI 消失。
+
+### 输入框上方的原生小宠物
+
+输入框上方那只小 Clawd 是 **Claude Code 自带的 `/buddy` 彩蛋**,不是本 App 的桌宠,
+也不是 `glm-quota-pet` 插件的 band 宠物。Claude Code 目前没有持久关闭它的设置,
+只有当前会话的:
+
+```text
+/buddy off
+```
+
+本机已在 `~/.claude/CLAUDE.md` 添加一条全局提醒,要求新会话开始时执行 `/buddy off`;
+如果它仍然重新出现,在 Claude Code 里再执行一次即可。
 
 ## 交互
 
