@@ -2158,6 +2158,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
     private var activationObserver: NSObjectProtocol?
     private var panelShown = false
     private var suppressShowUntil = Date.distantPast
+    private var pluginToggleInFlight = false
 
     func applicationWillTerminate(_ notification: Notification) {
         saveWindowPosition()
@@ -2477,6 +2478,10 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         stateItem.submenu = stateDemoMenu()
         menu.addItem(stateItem)
 
+        let pluginItem = NSMenuItem(title: "Claude 内置插件", action: nil, keyEquivalent: "")
+        pluginItem.submenu = pluginMenu()
+        menu.addItem(pluginItem)
+
         let anchorItem = NSMenuItem(title: "显示位置", action: nil, keyEquivalent: "")
         anchorItem.submenu = anchorModeMenu()
         menu.addItem(anchorItem)
@@ -2532,6 +2537,9 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
                 entry.state = abs(current - Double(entry.tag) / 100.0) < 0.01 ? .on : .off
             }
         }
+        for item in menu.items where item.title == "Claude 内置插件" {
+            item.submenu = pluginMenu()
+        }
     }
 
     private func textScaleMenu() -> NSMenu {
@@ -2563,6 +2571,117 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             menu.addItem(item)
         }
         return menu
+    }
+
+    // MARK: Claude 内置插件开关
+
+    private let claudePluginID = "glm-quota-pet@glm-quota-pet-market"
+
+    private func claudeSettingsURL() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/settings.json")
+    }
+
+    private func isClaudePluginEnabled() -> Bool {
+        guard let data = try? Data(contentsOf: claudeSettingsURL()),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let enabled = root["enabledPlugins"] as? [String: Any] else { return false }
+        return enabled[claudePluginID] as? Bool ?? false
+    }
+
+    private func claudeCLIURL() -> URL? {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let candidates = [
+            home + "/.local/bin/claude",
+            "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+            "/usr/bin/claude",
+        ]
+        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
+            return URL(fileURLWithPath: path)
+        }
+        return nil
+    }
+
+    private func pluginMenu() -> NSMenu {
+        let menu = NSMenu()
+        let enabled = isClaudePluginEnabled()
+        let status = NSMenuItem(title: enabled ? "当前:已启用" : "当前:已禁用",
+                                action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        menu.addItem(status)
+        menu.addItem(.separator())
+
+        let toggle = NSMenuItem(title: enabled ? "禁用插件" : "启用插件",
+                                action: #selector(menuToggleClaudePlugin(_:)), keyEquivalent: "")
+        toggle.target = self
+        toggle.representedObject = !enabled
+        menu.addItem(toggle)
+
+        let hint = NSMenuItem(title: "改动需重启 Claude 会话/App 后生效",
+                              action: nil, keyEquivalent: "")
+        hint.isEnabled = false
+        menu.addItem(hint)
+        return menu
+    }
+
+    @objc private func menuToggleClaudePlugin(_ sender: NSMenuItem) {
+        guard let enable = sender.representedObject as? Bool else { return }
+        setClaudePlugin(enabled: enable)
+    }
+
+    private func setClaudePlugin(enabled: Bool) {
+        guard !pluginToggleInFlight else { return }
+        guard let cli = claudeCLIURL() else {
+            showPluginAlert(title: "找不到 claude 命令",
+                            message: "无法控制 Claude 内置插件。请确认 Claude Code CLI 已安装。")
+            return
+        }
+        pluginToggleInFlight = true
+        let process = Process()
+        process.executableURL = cli
+        process.arguments = ["plugin", enabled ? "enable" : "disable",
+                             claudePluginID, "--scope", "user", "--json"]
+        var environment = ProcessInfo.processInfo.environment
+        environment["PATH"] = FileManager.default.homeDirectoryForCurrentUser.path +
+            "/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        process.environment = environment
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        process.terminationHandler = { [weak self] proc in
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.pluginToggleInFlight = false
+                if proc.terminationStatus == 0 {
+                    let action = enabled ? "启用" : "禁用"
+                    self.showPluginAlert(title: "已\(action) Claude 内置插件",
+                                         message: "插件状态已写入 user settings。\n重启 Claude 会话/App 后生效。")
+                } else {
+                    self.showPluginAlert(title: "插件切换失败",
+                                         message: output.isEmpty ? "claude 命令退出码 \(proc.terminationStatus)" : output)
+                }
+                self.rebuildStatusMenu()
+            }
+        }
+        do {
+            try process.run()
+        } catch {
+            pluginToggleInFlight = false
+            showPluginAlert(title: "启动 claude 命令失败", message: error.localizedDescription)
+        }
+    }
+
+    private func showPluginAlert(title: String, message: String) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "好")
+        alert.runModal()
     }
 
     private func anchorModeMenu() -> NSMenu {
@@ -2801,6 +2920,10 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
         let stateItem = NSMenuItem(title: "状态演示", action: nil, keyEquivalent: "")
         stateItem.submenu = stateDemoMenu()
         menu.addItem(stateItem)
+
+        let pluginItem = NSMenuItem(title: "Claude 内置插件", action: nil, keyEquivalent: "")
+        pluginItem.submenu = pluginMenu()
+        menu.addItem(pluginItem)
 
         let anchorItem = NSMenuItem(title: "显示位置", action: nil, keyEquivalent: "")
         anchorItem.submenu = anchorModeMenu()

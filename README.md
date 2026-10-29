@@ -1,4 +1,4 @@
-# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.23)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.24)
 
 > macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
 > 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
@@ -53,6 +53,18 @@ launchctl kickstart -k gui/$(id -u)/com.richarddou.clawdfloat   # 手动重启
 - 桌面自由悬浮 + `levelMode=allSpaces`:桌宠常驻你当前访问的桌面,切 Space/切 App 都保持可见;
 - 关闭输入框上方的 band 宠物:旧插件 `glm-quota-pet` 已在设置里禁用,并已重启 Claude 卸载;
   想恢复 band 形态再执行 `claude plugin enable glm-quota-pet@glm-quota-pet-market`(需重启会话)。
+
+## 控制 Claude 内置插件
+
+Claude 内部插件管理里的 turn on/off 失效时,可以直接用桌宠菜单控制:
+
+右键 / 菜单栏 🦀 → **Claude 内置插件** → **启用插件 / 禁用插件**
+
+- 实际执行:
+  `claude plugin enable|disable glm-quota-pet@glm-quota-pet-market --scope user`;
+- 菜单里会显示当前状态(`当前:已启用/已禁用`);
+- 修改后需要**重启 Claude Code 会话或 Claude App** 才生效;
+- 使用独立桌面版时建议保持插件**禁用**,避免 band 宠物和桌宠同时出现。
 
 ## 交互
 
