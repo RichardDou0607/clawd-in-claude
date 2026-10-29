@@ -2632,7 +2632,9 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
 
     private func setClaudePlugin(enabled: Bool) {
         guard !pluginToggleInFlight else { return }
+        log("plugin toggle requested enabled=\(enabled)")
         guard let cli = claudeCLIURL() else {
+            log("plugin toggle failed: claude CLI not found")
             showPluginAlert(title: "找不到 claude 命令",
                             message: "无法控制 Claude 内置插件。请确认 Claude Code CLI 已安装。")
             return
@@ -2656,6 +2658,7 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.pluginToggleInFlight = false
+                log("plugin toggle exit=\(proc.terminationStatus) output=\(output.prefix(200))")
                 if proc.terminationStatus == 0 {
                     let action = enabled ? "启用" : "禁用"
                     self.showPluginAlert(title: "已\(action) Claude 内置插件",
