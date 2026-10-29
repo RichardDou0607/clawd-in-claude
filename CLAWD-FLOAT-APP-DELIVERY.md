@@ -1,5 +1,14 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.22)
+# Clawd 桌宠 · 状态动作版交付报告(v1.23)
 
+> **v1.23 稳定开机自启(2026-10-29 10:05):**
+> 之前每次需要手动启动/找助手启动。新增并已安装用户级 LaunchAgent:
+> - `./install-launchagent.sh` 编译后把二进制安装到
+>   `~/Library/Application Support/ClawdFloat/ClawdFloat`(仓库移动也不影响);
+> - 写入 `~/Library/LaunchAgents/com.richarddou.clawdfloat.plist`,RunAtLoad 登录自启;
+> - KeepAlive SuccessfulExit=false:异常退出自动重启,菜单正常退出不会强制拉起;
+> - 已实测 kill -9 后 launchd 在数秒内自动拉起新进程;
+> - `./uninstall-launchagent.sh` 取消自启。
+>
 > **v1.22 删除截图(2026-10-28 16:38):**
 > 应要求删除仓库内全部截图(evidence/ 下的 PNG 等),README 只保留文本回归记录;
 > 为避免公开仓库历史里仍能拿到旧截图,已同步清理 Git 历史并强推 main。

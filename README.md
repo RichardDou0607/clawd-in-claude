@@ -1,4 +1,4 @@
-# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.22)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.23)
 
 > macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
 > 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
@@ -19,9 +19,35 @@
 ```bash
 git clone https://github.com/RichardDou0607/clawd-in-claude.git
 cd clawd-in-claude
-./build.sh        # 首次编译(生成 build/ClawdFloat)
-./run.sh          # 启动
+./install-launchagent.sh   # 推荐:编译 + 安装登录自启
+# 或者只临时启动(不登录自启):
+./build.sh && ./run.sh
 ```
+
+## 开机自启 / 稳定启动(推荐)
+
+执行一次:
+
+```bash
+./install-launchagent.sh
+```
+
+- 编译并安装到固定路径 `~/Library/Application Support/ClawdFloat/ClawdFloat`;
+- 装用户级 LaunchAgent `~/Library/LaunchAgents/com.richarddou.clawdfloat.plist`;
+- **登录后自动启动**,不需要每次手动运行/找助手启动;
+- 异常退出(崩溃/被杀)launchd 会自动重启;
+- 菜单里正常「退出 Clawd」不会被强制拉起(下次登录再启动)。
+
+状态/重启/卸载:
+
+```bash
+launchctl print gui/$(id -u)/com.richarddou.clawdfloat | head -30
+launchctl kickstart -k gui/$(id -u)/com.richarddou.clawdfloat   # 手动重启
+./uninstall-launchagent.sh                                      # 取消登录自启
+```
+
+> 代码更新后重新跑一次 `./install-launchagent.sh` 即可把新二进制安装到固定路径。
+> 日志在 `~/Library/Application Support/ClawdFloat/launchd.out.log` / `launchd.err.log`。
 
 - 跟随 Claude 窗口模式:切到 Finder/其他 App **立刻隐藏**(不会闪一下),切回 Claude 延迟约 0.28s 再显示;
 - 桌面自由悬浮 + `levelMode=allSpaces`:桌宠常驻你当前访问的桌面,切 Space/切 App 都保持可见;
