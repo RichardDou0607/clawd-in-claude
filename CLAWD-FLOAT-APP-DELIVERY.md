@@ -1,5 +1,12 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.23)
+# Clawd 桌宠 · 状态动作版交付报告(v1.24)
 
+> **v1.24 从桌宠菜单控制 Claude 内置插件(2026-10-29 10:12):**
+> Claude 内部插件管理 turn on/off 失效时:
+> - 右键 / 菜单栏 🦀 →「Claude 内置插件」→ 启用/禁用;
+> - 调用 `claude plugin enable|disable glm-quota-pet@glm-quota-pet-market --scope user`;
+> - 菜单显示当前状态;改动需重启 Claude 会话/App 生效;
+> - 已把旧插件设为禁用,独立桌面版不会和 band 宠物重复;需要时可从菜单再启用。
+>
 > **v1.23 稳定开机自启(2026-10-29 10:05):**
 > 之前每次需要手动启动/找助手启动。新增并已安装用户级 LaunchAgent:
 > - `./install-launchagent.sh` 编译后把二进制安装到
