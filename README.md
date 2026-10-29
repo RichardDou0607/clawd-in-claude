@@ -137,7 +137,9 @@ App 每 0.25s 读一次:
 > 快速工具(Edit/Read 的 Pre/Post 可能只差几十毫秒)通过 hook 的 `last_tool/last_tool_ts` 兜底展示 1.2 秒,
 > 不会因为 0.25s 轮询直接跳过“编辑中/读取中”。
 > Claude Code 内部的 `mcp__ccd_turn__*`(update_plan / wrap_up 等)不是用户可见动作,
-> hook 会直接忽略,避免把真实的思考/工具/工作状态冲掉。状态切换日志:
+> hook 会直接忽略,避免把真实的思考/工具/工作状态冲掉。
+> **会话异常退出时 Stop/SessionEnd 可能丢失**:working/thinking 超过 2 分钟没有新事件会自动回空闲,
+> 避免残留会话让桌宠一直显示“思考中”。状态切换日志:
 > `~/Library/Application Support/ClawdFloat/claude-activity.log`(hook 事件)和 `app.log` 里的 `activity ->`。
 
 ### 多会话兼容
@@ -149,7 +151,7 @@ Claude Code 同时开多个会话/窗口时,状态不再“最后写入的覆盖
 - 聚合优先级:
   `等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲`;
 - 同优先级取**最新事件**;
-- `SessionEnd` 移除该会话文件;30 分钟无事件的会话视为过期;
+- `SessionEnd` 移除该会话文件;10 分钟无事件的会话视为过期;
 - 因此一个会话在工作时,另一个会话弹审批,桌宠会显示“等待审批”;
   一个会话 Stop/闲置也不会覆盖另一个会话的“工作中/调用工具”。
 

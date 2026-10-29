@@ -44,7 +44,7 @@ STATE_PRIORITY = {
     "done": 2,
     "idle": 1,
 }
-SESSION_TTL_MS = 30 * 60 * 1000
+SESSION_TTL_MS = 10 * 60 * 1000
 
 raw = ""
 try:

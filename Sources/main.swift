@@ -2111,6 +2111,9 @@ final class ClaudeActivityWatcher {
             // 工具结束后先保持 4s 工作中;4s 内没有下一个工具,说明模型进入长时间思考/生成。
             if state == .working && age > 4.0 { effective = .thinking }
         }
+        // 会话异常退出时 Stop/SessionEnd 可能丢失,hook 状态会残留 working;
+        // 长时间没有任何新事件就不要一直显示“思考中”(2 分钟后视为空闲)。
+        if effective == .thinking && age > 120 { effective = .idle }
         // 完成态展示几秒后回到空闲;等待确认/思考等长时间无新事件也回空闲,避免卡住
         if state == .done && age > 6 { effective = .idle }
         if age > 900 { effective = .idle }
