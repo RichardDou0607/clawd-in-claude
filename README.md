@@ -1,4 +1,4 @@
-# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.24)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.26)
 
 > macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
 > 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
@@ -24,7 +24,7 @@ cd clawd-in-claude
 ./build.sh && ./run.sh
 ```
 
-## 开机自启 / 稳定启动(推荐)
+## 开机自启 / 插件绑定启动器(推荐)
 
 执行一次:
 
@@ -32,39 +32,55 @@ cd clawd-in-claude
 ./install-launchagent.sh
 ```
 
-- 编译并安装到固定路径 `~/Library/Application Support/ClawdFloat/ClawdFloat`;
-- 装用户级 LaunchAgent `~/Library/LaunchAgents/com.richarddou.clawdfloat.plist`;
-- **登录后自动启动**,不需要每次手动运行/找助手启动;
-- 异常退出(崩溃/被杀)launchd 会自动重启;
-- 菜单里正常「退出 Clawd」不会被强制拉起(下次登录再启动)。
+它安装的是一个**启动控制器**,不是直接把 App 固定成 LaunchAgent:
+
+- 编译 App 并安装到 `~/Library/Application Support/ClawdFloat/ClawdFloat`;
+- 控制器 `clawdfloat-controller.py` 常驻,每 0.5s 检查
+  `~/.claude/settings.json` 里 `glm-quota-pet` 的 enabled 状态;
+- **插件启用 → 立即拉起桌宠;插件禁用 → 立即停止桌宠**;
+- 登录后控制器自动启动;插件状态决定桌宠是否运行;
+- 桌宠异常退出会被控制器自动重启;
+- 插件未安装 / 配置读不到时默认启动桌宠,不会误停。
+
+所以现在 Claude 插件管理页的 turn on/off 就是桌宠的总开关,
+不需要重启 Claude,也不需要再手动找助手启动。
 
 状态/重启/卸载:
 
 ```bash
 launchctl print gui/$(id -u)/com.richarddou.clawdfloat | head -30
-launchctl kickstart -k gui/$(id -u)/com.richarddou.clawdfloat   # 手动重启
-./uninstall-launchagent.sh                                      # 取消登录自启
+launchctl kickstart -k gui/$(id -u)/com.richarddou.clawdfloat   # 只重启控制器
+./uninstall-launchagent.sh                                      # 取消自启与绑定
 ```
 
-> 代码更新后重新跑一次 `./install-launchagent.sh` 即可把新二进制安装到固定路径。
-> 日志在 `~/Library/Application Support/ClawdFloat/launchd.out.log` / `launchd.err.log`。
+- 想手动打开桌宠:运行 `./run.sh`(若插件被禁用,会先把它启用);
+- 想彻底停掉桌宠:在 Claude 插件页禁用 `Glm quota pet`;
+- 日志:`~/Library/Application Support/ClawdFloat/controller.log`。
 
 - 跟随 Claude 窗口模式:切到 Finder/其他 App **立刻隐藏**(不会闪一下),切回 Claude 延迟约 0.28s 再显示;
 - 桌面自由悬浮 + `levelMode=allSpaces`:桌宠常驻你当前访问的桌面,切 Space/切 App 都保持可见;
-- 关闭输入框上方的 band 宠物:旧插件 `glm-quota-pet` 已在设置里禁用,并已重启 Claude 卸载;
-  想恢复 band 形态再执行 `claude plugin enable glm-quota-pet@glm-quota-pet-market`(需重启会话)。
 
-## 控制 Claude 内置插件
+## Claude 插件开关 = 桌宠启动开关
 
-Claude 内部插件管理里的 turn on/off 失效时,可以直接用桌宠菜单控制:
+现在插件 enabled 状态和桌宠启动器绑定:
+
+- Claude 插件页 **turn on** `Glm quota pet` → 约 1 秒内桌宠启动;
+- **turn off** → 约 1 秒内桌宠进程停止;
+- 不需要重启 Claude,也不需要手动启动 App。
+
+也可以在桌宠运行时用菜单切换:
 
 右键 / 菜单栏 🦀 → **Claude 内置插件** → **启用插件 / 禁用插件**
 
-- 实际执行:
-  `claude plugin enable|disable glm-quota-pet@glm-quota-pet-market --scope user`;
-- 菜单里会显示当前状态(`当前:已启用/已禁用`);
-- 修改后需要**重启 Claude Code 会话或 Claude App** 才生效;
-- 使用独立桌面版时建议保持插件**禁用**,避免 band 宠物和桌宠同时出现。
+实际执行:
+
+```bash
+claude plugin enable|disable glm-quota-pet@glm-quota-pet-market --scope user
+```
+
+> 禁用插件会立刻停止桌宠;启用插件会立刻拉起桌宠。
+> 如果桌宠已经停止,可以用 `./run.sh` 手动打开,它会先确保插件处于启用状态。
+> 插件自身的 band/宠物场 UI 是否加载仍由 Claude Code 会话决定,可能需要重启会话。
 
 ## 交互
 

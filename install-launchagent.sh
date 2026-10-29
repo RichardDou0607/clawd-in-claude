@@ -1,5 +1,8 @@
 #!/bin/bash
-# 安装并启动 LaunchAgent:登录后自动拉起 Clawd,崩溃自动重启(只做用户级安装,不需要 sudo)
+# 安装/更新 ClawdFloat 启动控制器(LaunchAgent):
+# - 登录后自动启动;
+# - 绑定 Claude 插件 glm-quota-pet 的 enabled 状态:启用→拉起桌宠,禁用→停止桌宠;
+# - 桌宠异常退出由控制器自动重启。
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -8,19 +11,21 @@ cd "$(dirname "$0")"
 LABEL="com.richarddou.clawdfloat"
 DOMAIN="gui/$(id -u)"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LOG_DIR="$HOME/Library/Application Support/ClawdFloat"
-INSTALL_BIN="$LOG_DIR/ClawdFloat"
+INSTALL_DIR="$HOME/Library/Application Support/ClawdFloat"
+APP_BIN="$INSTALL_DIR/ClawdFloat"
+CONTROLLER="$INSTALL_DIR/clawdfloat-controller.py"
 
-mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
+mkdir -p "$HOME/Library/LaunchAgents" "$INSTALL_DIR"
 
-# 先停掉旧服务/旧进程,避免同一只宠物启动两份
+# 停掉旧的“直接运行 App”的 LaunchAgent 和旧进程
 launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+pkill -f "$APP_BIN" 2>/dev/null || true
+pkill -f "$CONTROLLER" 2>/dev/null || true
 pkill -f "$(pwd)/build/ClawdFloat" 2>/dev/null || true
-pkill -f "$INSTALL_BIN" 2>/dev/null || true
 sleep 0.3
 
-# 安装到固定路径:以后移动/重建仓库也不会影响登录启动
-install -m 0755 build/ClawdFloat "$INSTALL_BIN"
+install -m 0755 build/ClawdFloat "$APP_BIN"
+install -m 0755 clawdfloat-controller.py "$CONTROLLER"
 
 cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -31,17 +36,15 @@ cat > "$PLIST" <<EOF
     <string>$LABEL</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$INSTALL_BIN</string>
+        <string>/usr/bin/python3</string>
+        <string>$CONTROLLER</string>
     </array>
     <key>WorkingDirectory</key>
     <string>$HOME</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-    </dict>
+    <true/>
     <key>ThrottleInterval</key>
     <integer>5</integer>
     <key>ProcessType</key>
@@ -49,9 +52,9 @@ cat > "$PLIST" <<EOF
     <key>LimitLoadToSessionType</key>
     <string>Aqua</string>
     <key>StandardOutPath</key>
-    <string>$LOG_DIR/launchd.out.log</string>
+    <string>$INSTALL_DIR/controller.out.log</string>
     <key>StandardErrorPath</key>
-    <string>$LOG_DIR/launchd.err.log</string>
+    <string>$INSTALL_DIR/controller.err.log</string>
 </dict>
 </plist>
 EOF
@@ -59,19 +62,13 @@ EOF
 plutil -lint "$PLIST" >/dev/null
 launchctl bootstrap "$DOMAIN" "$PLIST"
 launchctl enable "$DOMAIN/$LABEL" 2>/dev/null || true
-# bootstrap 的 RunAtLoad 已经会启动;这里再确保一次
 launchctl kickstart -k "$DOMAIN/$LABEL" 2>/dev/null || true
-sleep 1
+sleep 1.2
 
-if pgrep -f "$INSTALL_BIN" >/dev/null; then
-  echo "✔ LaunchAgent 已安装并启动: $PLIST"
-  echo "  可执行文件: $INSTALL_BIN"
-  echo "  登录后自动启动;异常退出会自动重启;菜单里正常退出不会重启。"
-  echo "  状态: launchctl print $DOMAIN/$LABEL | head"
-  echo "  卸载: ./uninstall-launchagent.sh"
-else
-  echo "✘ LaunchAgent 已安装,但进程没有启动。请检查:" >&2
-  launchctl print "$DOMAIN/$LABEL" 2>&1 | head -30 >&2 || true
-  echo "  日志: $LOG_DIR/launchd.err.log" >&2
-  exit 1
-fi
+echo "✔ LaunchAgent 已安装: $PLIST"
+echo "  控制器: $CONTROLLER"
+echo "  App 二进制: $APP_BIN"
+echo "  插件启用 → 自动拉起桌宠;插件禁用 → 自动停止桌宠"
+echo "  状态: launchctl print $DOMAIN/$LABEL | head -30"
+echo "  日志: $INSTALL_DIR/controller.log"
+echo "  卸载: ./uninstall-launchagent.sh"

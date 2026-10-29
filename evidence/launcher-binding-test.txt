@@ -1,0 +1,11 @@
+== 插件 enabled 状态绑定启动器 ==
+plugin=true  -> controller started ClawdFloat
+plugin=false -> controller stopped ClawdFloat
+
+2026-10-29T14:17:14+0800 controller started
+2026-10-29T14:17:14+0800 plugin enabled state -> true
+2026-10-29T14:17:14+0800 started ClawdFloat (plugin enabled)
+2026-10-29T14:17:32+0800 plugin enabled state -> false
+2026-10-29T14:17:32+0800 stopped ClawdFloat (plugin disabled)
+2026-10-29T14:17:34+0800 plugin enabled state -> true
+2026-10-29T14:17:34+0800 started ClawdFloat (plugin enabled)

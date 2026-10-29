@@ -1,5 +1,15 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.25)
+# Clawd 桌宠 · 状态动作版交付报告(v1.26)
 
+> **v1.26 插件 enabled 状态绑定启动器(2026-10-29 14:20):**
+> 需求:Claude 插件页 turn on/off 直接控制桌宠启动器,禁用状态=启动器关闭。
+> 实现:
+> - LaunchAgent 不再直接跑 App,而是跑 `clawdfloat-controller.py`;
+> - 控制器每 0.5s 读 `~/.claude/settings.json` 的 `glm-quota-pet` enabled:
+>   true → 拉起 `ClawdFloat`,false → 停止进程;
+> - 登录后控制器自启;插件未安装/配置缺失时默认启动;
+> - `run.sh` 手动启动前会先确保插件启用;
+> - 实测:plugin false 1 秒内停 App,plugin true 1 秒内重新拉起。
+>
 > **v1.25 修复残留会话导致一直“思考中”(2026-10-29 11:10):**
 > 现象:Claude Code 已经没有任务,桌宠仍显示思考中。
 > 原因:
