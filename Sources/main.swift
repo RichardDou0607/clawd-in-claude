@@ -541,12 +541,13 @@ func moodFor(percentage: Int) -> PetMood {
 
 /// Claude Code 的工作状态(由 hooks 写入 claude-activity.json,App 轮询)
 enum PetActivity: String {
-    case idle, thinking, tool, working, waitingApproval, waitingReply, done, error
+    case idle, thinking, creating, tool, working, waitingApproval, waitingReply, done, error
 
     var label: String {
         switch self {
         case .idle: return "空闲"
         case .thinking: return "思考中"
+        case .creating: return "创作中"
         case .tool: return "调用工具"
         case .working: return "工作中"
         case .waitingApproval: return "等待审批"
@@ -560,6 +561,7 @@ enum PetActivity: String {
         switch self {
         case .idle: return NSColor(srgbRed: 0.62, green: 0.64, blue: 0.66, alpha: 1)
         case .thinking: return NSColor(srgbRed: 0.36, green: 0.66, blue: 0.98, alpha: 1)
+        case .creating: return NSColor(srgbRed: 0.98, green: 0.56, blue: 0.34, alpha: 1)
         case .tool: return NSColor(srgbRed: 0.76, green: 0.55, blue: 0.98, alpha: 1)
         case .working: return NSColor(srgbRed: 0.29, green: 0.78, blue: 0.52, alpha: 1)
         case .waitingApproval: return NSColor(srgbRed: 0.96, green: 0.64, blue: 0.20, alpha: 1)
@@ -1007,6 +1009,9 @@ final class PetView: NSView {
         case .thinking:
             offset.y = sin(Double(tick) * 0.28) * 0.9
             stepping = (tick % 52) >= 48 // 偶尔换一下脚
+        case .creating:
+            offset.y = sin(Double(tick) * 0.7) * 1.3
+            stepping = (tick % 10) < 5 // 快速小碎步,像在写东西
         case .waitingApproval, .waitingReply:
             offset.x = (tick % 12 < 6) ? 0 : 1
             stepping = (tick % 30) < 15 // 抖脚等用户/审批
@@ -1246,6 +1251,18 @@ final class PetView: NSView {
                 NSBezierPath(rect: NSRect(x: rect.minX + 1, y: rect.midY - 8, width: 10, height: 4)).fill()
                 NSBezierPath(rect: NSRect(x: rect.minX + 4, y: rect.midY + 3, width: 6, height: 3)).fill()
             }
+        case .creating:
+            NSGraphicsContext.current?.shouldAntialias = false
+            // 纸 + 铅笔
+            NSBezierPath(roundedRect: NSRect(x: rect.minX + 1, y: rect.minY + 1, width: 10, height: 14),
+                         xRadius: 1, yRadius: 1).fill()
+            NSColor.black.withAlphaComponent(0.65).setFill()
+            for i in 0..<3 {
+                NSBezierPath(rect: NSRect(x: rect.minX + 3, y: rect.minY + 4 + CGFloat(i) * 3,
+                                          width: 6, height: 1)).fill()
+            }
+            color.setFill()
+            NSBezierPath(rect: NSRect(x: rect.minX + 9, y: rect.minY + 6, width: 3, height: 9)).fill()
         case .working:
             NSGraphicsContext.current?.shouldAntialias = false
             for i in 0..<3 {
@@ -1313,6 +1330,8 @@ final class PetView: NSView {
                 NSBezierPath(ovalIn: NSRect(x: x, y: y, width: size, height: size)).fill()
                 NSBezierPath(ovalIn: NSRect(x: x - 2, y: y + size + 5, width: 3, height: 3)).fill()
             }
+        case .creating:
+            drawCreatingProp(in: rect)
         case .working:
             drawWorkingDesk(in: rect)
         case .tool:
@@ -1329,6 +1348,11 @@ final class PetView: NSView {
             drawCoffee(in: rect)
         }
         NSGraphicsContext.restoreGraphicsState()
+    }
+
+    /// 创作中:复用编辑道具(纸 + 铅笔),但状态动作更快、头顶有创作节奏
+    private func drawCreatingProp(in rect: NSRect) {
+        drawToolProp(in: rect, tool: "Write")
     }
 
     /// 工作中:迷你笔记本屏幕 + 键盘,两只小手臂在键盘上敲
@@ -2114,6 +2138,8 @@ final class ClaudeActivityWatcher {
         // 会话异常退出时 Stop/SessionEnd 可能丢失,hook 状态会残留 working;
         // 长时间没有任何新事件就不要一直显示“思考中”(2 分钟后视为空闲)。
         if effective == .thinking && age > 120 { effective = .idle }
+        // 创作中也可能因会话异常退出而残留;5 分钟没有新事件就回空闲
+        if effective == .creating && age > 300 { effective = .idle }
         // 完成态展示几秒后回到空闲;等待确认/思考等长时间无新事件也回空闲,避免卡住
         if state == .done && age > 6 { effective = .idle }
         if age > 900 { effective = .idle }
@@ -2564,8 +2590,8 @@ final class AppController: NSObject, NSApplicationDelegate, PetViewDelegate {
 
     private func stateDemoMenu() -> NSMenu {
         let menu = NSMenu()
-        for (raw, title) in [("idle", "空闲"), ("thinking", "思考中"), ("tool", "调用工具"),
-                             ("working", "工作中"), ("waitingApproval", "等待审批"),
+        for (raw, title) in [("idle", "空闲"), ("thinking", "思考中"), ("creating", "创作中"),
+                             ("tool", "调用工具"), ("working", "工作中"), ("waitingApproval", "等待审批"),
                              ("waitingReply", "等待回复"),
                              ("done", "完成"), ("error", "出错")] {
             let item = NSMenuItem(title: title, action: #selector(menuDemoState(_:)), keyEquivalent: "")

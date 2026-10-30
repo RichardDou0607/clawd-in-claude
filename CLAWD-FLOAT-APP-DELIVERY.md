@@ -1,5 +1,21 @@
-# Clawd 桌宠 · 状态动作版交付报告(v1.27)
+# Clawd 桌宠 · 状态动作版交付报告(v1.28)
 
+> **v1.28 修复 Creating 阶段错误显示思考中(2026-10-30 11:35):**
+> 原因:
+> - Claude Code 的 Creating 阶段发生在 `mcp__ccd_turn__update_plan` 内部工具期间;
+> - 旧 hook 把所有 `mcp__ccd_turn__*` 都过滤了,App 收不到任何事件,
+>   只能从 UserPromptSubmit 的 thinking 一路保持到下一个 Write,所以看起来是“思考中”。
+>
+> 修复:
+> - `update_plan` 的 Pre/PostToolUse 映射为新的 **创作中(creating)** 状态;
+> - 新增橙粉色「创作中」状态徽章 + 纸笔道具 + 快速小碎步;
+> - `wrap_up` 等其它内部工具继续忽略;
+> - 多会话聚合优先级加入 creating(与 working 同档,取最新);
+> - 创作中超过 5 分钟无新事件回空闲,避免残留。
+>
+> 回归:update_plan Pre/Post → creating;随后 Write → 编辑中。
+> 证据:`evidence/creating-state-test.txt`。
+>
 > **v1.27 移除输入框 band 视觉 / 区分原生 buddy(2026-10-29 14:52):**
 > 现象:桌宠启动后输入框上方仍出现一个小 pet。
 > 排查:

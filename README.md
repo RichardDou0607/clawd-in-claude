@@ -1,4 +1,4 @@
-# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.27)
+# Clawd in Claude — Claude Code 像素桌宠 / GLM 额度悬浮层(v1.28)
 
 > macOS 透明覆盖层 App,读取 Claude Code hooks 的实时状态,用像素螃蟹展示
 > 思考中/工具/工作中/等待审批/等待回复/完成/出错,并显示 GLM Coding Plan 额度。
@@ -137,6 +137,7 @@ claude plugin enable|disable glm-quota-pet@glm-quota-pet-market --scope user
 | --- | --- |
 | 空闲 | **喝咖啡**:白瓷杯身 + 蓝色横纹/深蓝杯套白点/蓝色把手/深蓝杯垫(刻意避开螃蟹橙色),每约 10 秒抬杯喝一口,杯口冒热气,同时眨眼 |
 | 思考中 | 头顶冒出三个思考气泡,身体轻轻晃,偶尔换脚 |
+| **创作中** | 对应 Claude Code 的 **Creating…** 阶段:纸笔道具 + 快速小碎步;由内部 `mcp__ccd_turn__update_plan` 触发 |
 | 调用工具(按工具细分) | **编辑中**(Edit/Write)、**读取中**(Read)、**搜索中**(Grep/Glob/WebSearch)、**列出中**(LS/List)、**运行中**(Bash)、**查找中**(WebFetch)、**分派中**(Task/Agent)、**更新计划**(TodoWrite/Plan)、**执行技能**(Skill)、**发送中**(SendUserFile);未知工具显示工具名+扳手 |
 | 工作中 | 抱着迷你笔记本,屏幕滚动代码,两只小手臂在键盘上交替敲击 |
 | 等待审批 | 左边一块审批板,红色「待批」章反复盖下,小手臂扶着板,抖脚 |
@@ -151,6 +152,7 @@ App 每 0.25s 读一次:
 | --- | --- |
 | `UserPromptSubmit` | 思考中(模型开始想/写) |
 | `PreToolUse` | 按 tool_name 显示 **编辑中/读取中/搜索中/列出中/运行中/查找中/分派中/更新计划/执行技能/发送中**;状态持续整个工具执行过程,直到 PostToolUse |
+| `PreToolUse`/`PostToolUse` 且 tool=`mcp__ccd_turn__update_plan` | **创作中**,对应 Claude UI 的 Creating 阶段(不再错误显示思考中) |
 | 工具持续执行 | 工作中(抱笔记本敲,持续到 PostToolUse) |
 | `PostToolUse` / `SubagentStop` | **工作中**;若 4 秒内没有下一个工具,切到 **思考中** |
 | 下一个 `PreToolUse` | 调用工具 → 工作中(所以连续工具循环会一直保持工作中的节奏) |
@@ -167,8 +169,8 @@ App 每 0.25s 读一次:
 > 长工具(WebSearch/List/Bash 等)保持工具状态直到 PostToolUse,不会 0.6s 后就换 working;
 > 快速工具(Edit/Read 的 Pre/Post 可能只差几十毫秒)通过 hook 的 `last_tool/last_tool_ts` 兜底展示 1.2 秒,
 > 不会因为 0.25s 轮询直接跳过“编辑中/读取中”。
-> Claude Code 内部的 `mcp__ccd_turn__*`(update_plan / wrap_up 等)不是用户可见动作,
-> hook 会直接忽略,避免把真实的思考/工具/工作状态冲掉。
+> Claude Code 内部的 `mcp__ccd_turn__update_plan` 现在映射为 **创作中**(Creating);
+> `mcp__ccd_turn__wrap_up` 等其它内部工具仍然忽略,避免把真实的思考/工具/工作状态冲掉。
 > **会话异常退出时 Stop/SessionEnd 可能丢失**:working/thinking 超过 2 分钟没有新事件会自动回空闲,
 > 避免残留会话让桌宠一直显示“思考中”。状态切换日志:
 > `~/Library/Application Support/ClawdFloat/claude-activity.log`(hook 事件)和 `app.log` 里的 `activity ->`。
@@ -180,7 +182,7 @@ Claude Code 同时开多个会话/窗口时,状态不再“最后写入的覆盖
 - 每个会话写自己的 `~/Library/Application Support/ClawdFloat/sessions/<session_id>.json`;
 - hook 再聚合出一个全局 `claude-activity.json` 给 App 读取;
 - 聚合优先级:
-  `等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲`;
+  `等待审批 > 等待回复 > 出错 > 调用工具 > 创作中 ≈ 工作中 > 思考中 > 完成 > 空闲`;
 - 同优先级取**最新事件**;
 - `SessionEnd` 移除该会话文件;10 分钟无事件的会话视为过期;
 - 因此一个会话在工作时,另一个会话弹审批,桌宠会显示“等待审批”;

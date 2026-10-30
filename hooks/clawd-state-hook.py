@@ -6,8 +6,8 @@
 
 每个会话写自己的 sessions/<session_id>.json,再按优先级聚合出一个全局状态。
 这样多个 Claude Code 会话/窗口同时运行时,不会互相把状态冲掉:
-  等待审批 > 等待回复 > 出错 > 调用工具 > 工作中 > 思考中 > 完成 > 空闲
-同优先级取最新事件。SessionEnd 会移除该会话文件。
+  等待审批 > 等待回复 > 出错 > 调用工具 > 创作中/工作中 > 思考中 > 完成 > 空闲
+同优先级取最新事件。update_plan 会被映射成 creating(Claude UI 的 Creating 阶段)。
 本脚本永远 exit 0,不阻断任何操作。
 """
 import fcntl
@@ -39,6 +39,7 @@ STATE_PRIORITY = {
     "waitingReply": 7,
     "error": 6,
     "tool": 5,
+    "creating": 4,
     "working": 4,
     "thinking": 3,
     "done": 2,
@@ -65,10 +66,12 @@ tool = payload.get("tool_name") or payload.get("tool") or ""
 message = payload.get("message") or ""
 session = payload.get("session_id") or ""
 
-# Claude Code 内部 turn 编排工具(update_plan / wrap_up 等)不是用户可见动作,
-# 不写状态,否则会把真实的 思考/工具/工作 状态冲掉。
+# Claude Code 内部 turn 编排工具:
+# - update_plan 在 Claude UI 里对应 "Creating..." 阶段,映射成 creating(创作中);
+# - wrap_up 等其它内部工具仍然跳过,避免把真实状态冲掉。
 if isinstance(tool, str) and tool.startswith("mcp__ccd_turn__"):
-    sys.exit(0)
+    if tool != "mcp__ccd_turn__update_plan":
+        sys.exit(0)
 
 state = EVENT_STATE.get(EVENT, "idle")
 if EVENT == "Notification":
@@ -77,6 +80,11 @@ if EVENT == "Notification":
     state = "waitingApproval" if any(word in text for word in approval_words) else "waitingReply"
 elif EVENT == "PreToolUse" and tool == "AskUserQuestion":
     state = "waitingReply"
+
+# Claude Code 的 Creating 阶段由内部 update_plan 触发;
+# Pre/PostToolUse 都保持 creating,直到下一个可见工具/Stop。
+if tool == "mcp__ccd_turn__update_plan":
+    state = "creating"
 
 now_ms = int(time.time() * 1000)
 directory = os.environ.get("CLAWD_FLOAT_DIR") or os.path.expanduser("~/Library/Application Support/ClawdFloat")
@@ -181,6 +189,10 @@ try:
     elif EVENT in ("PostToolUse", "PostToolUseFailure"):
         last_tool = previous.get("last_tool")
         last_tool_ts = previous.get("last_tool_ts")
+    if state == "creating":
+        # update_plan 不是可见工具,不要让 App 的 last_tool 兜底显示成“工具 mcp__...”
+        last_tool = None
+        last_tool_ts = None
 
     event_record = {
         "state": state,
